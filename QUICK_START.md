@@ -1,283 +1,243 @@
-# 🚀 Quick Start Guide - Financial Helm
+# Quick Start Guide - Financial Helm
 
-## Get Up and Running in 5 Minutes!
+Get up and running with Financial Helm in 5 minutes!
 
-### Step 1: Install Dependencies ⚡
+## Prerequisites
+
+- Node.js 18+
+- PostgreSQL 15+
+- npm or yarn
+
+## Step 1: Install Dependencies (1 min)
+
 ```bash
 npm install
 ```
 
-### Step 2: Start Development Server 🏃
+## Step 2: Set Up Database (2 min)
+
+```bash
+# Copy environment variables
+cp .env.example .env
+
+# Edit .env and set your DATABASE_URL
+# Example: DATABASE_URL="postgresql://user:password@localhost:5432/financial_helm"
+
+# Generate Prisma Client
+npx prisma generate
+
+# Run migrations
+npx prisma migrate dev --name init
+
+# Seed sample data (optional but recommended)
+npm run db:seed
+```
+
+## Step 3: Start Development Server (30 sec)
+
 ```bash
 npm run dev
 ```
 
-### Step 3: Open in Browser 🌐
-Navigate to: **http://localhost:3000**
+Visit http://localhost:3000
 
----
+## Step 4: Upload Sample Data (1 min)
 
-## 📱 What You'll See
+1. Navigate to http://localhost:3000/dashboard
+2. Click "📤 Upload CSV" button
+3. Choose one of these sample files:
+   - `sample-transactions.csv` - Quick test (15 transactions)
+   - `sample-data/transactions-full-month.csv` - Full month (40 transactions)
+   - `sample-data/transactions-3-months.csv` - Historical data (56 transactions)
 
-### Homepage (`/`)
-Beautiful landing page with:
-- Hero section featuring the Financial Helm logo
-- Feature showcase (6 key features)
-- Call-to-action buttons
-- Responsive navigation
+4. Review transactions in the table
+5. Edit categories if needed
+6. Click "Confirm & Import"
 
-### Dashboard (`/dashboard`)
-Financial overview with:
-- **4 Summary Cards**: Balance, Income, Expenses, Savings Rate
-- **Spending by Category**: Visual breakdown with progress bars
-- **Recent Transactions**: Last 4 transactions
-- **Quick Actions**: Buttons for common tasks
+## Step 5: Initialize Weekly Budgets (30 sec)
 
-### Transactions (`/transactions`)
-Transaction management:
-- **Summary Cards**: Income, Expenses, Net Balance
-- **Filters**: All, Income, Expenses
-- **Search**: Find transactions quickly
-- **Transaction List**: Full history with edit/delete options
-
-### Budgets (`/budgets`)
-Budget tracking:
-- **Overview**: Total budget, spent, remaining
-- **Category Budgets**: 6 pre-configured categories
-- **Progress Bars**: Visual spending indicators
-- **Warnings**: Alerts when approaching limits
-- **Tips**: Budget management advice
-
-### Goals (`/goals`)
-Financial goals:
-- **Goal Cards**: 4 sample savings goals
-- **Progress Tracking**: Visual progress bars
-- **Suggestions**: Monthly savings recommendations
-- **Tips**: Goal achievement strategies
-
----
-
-## 🎨 Design Highlights
-
-### Color Scheme
-- **Navy Blue** `#0A3D62` - Primary brand
-- **Green** `#22C55E` - Success/Income
-- **Red** `#EF4444` - Expenses/Warnings
-
-### Responsive Design
-- ✅ Mobile (< 768px)
-- ✅ Tablet (768px - 1024px)
-- ✅ Desktop (> 1024px)
-
-### Navigation
-- Sticky header with logo
-- Mobile hamburger menu
-- Quick access to all features
-- "Get Started" CTA button
-
----
-
-## 🔧 Available Commands
+After uploading transactions, initialize your weekly budgets:
 
 ```bash
-# Development
-npm run dev          # Start dev server (http://localhost:3000)
-
-# Production
-npm run build        # Build for production
-npm start            # Run production server
-
-# Code Quality
-npm run lint         # Run ESLint
+curl -X POST http://localhost:3000/api/budgets/initialize \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "demo-user-id"}'
 ```
 
----
-
-## 📂 Key Files to Explore
-
-### Pages
-```
-src/app/page.tsx              # Homepage
-src/app/dashboard/page.tsx    # Dashboard
-src/app/transactions/page.tsx # Transactions
-src/app/budgets/page.tsx      # Budgets
-src/app/goals/page.tsx        # Goals
-```
-
-### Components
-```
-src/components/Navigation.tsx  # Main navigation
-src/components/ui/Button.tsx   # Button component
-src/components/ui/Card.tsx     # Card component
-```
-
-### Types
-```
-src/types/index.ts            # TypeScript definitions
-```
-
-### Styles
-```
-src/app/globals.css           # Global CSS
-```
-
----
-
-## 🎯 Sample Data Included
-
-The MVP includes realistic sample data:
-
-### Transactions (6 items)
-- Salary deposit: $5,000
-- Rent payment: $1,200
-- Groceries: $85.50
-- Gas: $45
-- Netflix: $15.99
-- Freelance: $500
-
-### Budgets (6 categories)
-- Housing: $1,500
-- Food & Dining: $800
-- Transportation: $400
-- Entertainment: $300
-- Shopping: $500
-- Healthcare: $300
-
-### Goals (4 items)
-- Emergency Fund: $10,000 target
-- Vacation to Europe: $5,000 target
-- New Laptop: $2,000 target
-- Car Down Payment: $15,000 target
-
----
-
-## 🌟 Key Features Demonstrated
-
-### ✅ Modern UI/UX
-- Clean, professional design
-- Smooth transitions and hover effects
-- Intuitive navigation
-- Consistent styling
-
-### ✅ Responsive Layout
-- Mobile-first approach
-- Flexible grids
-- Adaptive navigation
-- Touch-friendly buttons
-
-### ✅ Financial Visualization
-- Progress bars for budgets
-- Category breakdowns
-- Goal tracking
-- Transaction history
-
-### ✅ Interactive Elements
-- Filterable transaction list
-- Searchable data
-- Hover states
-- Click animations
-
----
-
-## 📚 Next Steps
-
-1. **Explore the App**
-   - Navigate through all pages
-   - Try the mobile menu
-   - Check responsive breakpoints
-
-2. **Read Documentation**
-   - [PROJECT_REQUIREMENTS.md](./PROJECT_REQUIREMENTS.md) - Full requirements
-   - [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) - Design guidelines
-   - [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md) - Developer docs
-
-3. **Customize**
-   - Add your own data
-   - Modify colors in components
-   - Adjust layouts
-   - Add new features
-
-4. **Plan Phase 2**
-   - Database integration
-   - User authentication
-   - Bank API connections
-   - Real-time updates
-
----
-
-## 🐛 Troubleshooting
-
-### Port 3000 already in use?
+Or use the Prisma Studio:
 ```bash
-# Kill the process
-lsof -ti:3000 | xargs kill -9
-
-# Or use a different port
-npm run dev -- -p 3001
+npx prisma studio
 ```
 
-### Module not found errors?
+## Step 6: View Your Budget Status
+
+### Option A: Via API
+
 ```bash
-# Clean install
-rm -rf node_modules package-lock.json
-npm install
+curl "http://localhost:3000/api/budgets?userId=demo-user-id"
 ```
 
-### Tailwind styles not working?
+### Option B: Via Prisma Studio
+
 ```bash
-# Restart dev server
-# Press Ctrl+C and run npm run dev again
+npx prisma studio
+# Navigate to weekly_budgets table
 ```
 
+## What You Should See
+
+After completing these steps, you should have:
+
+✅ **Database**: 6 tables with sample data
+- users (1 demo user)
+- categories (8 default categories)
+- transactions (15-56 transactions depending on file)
+- weekly_budgets (8 budgets, one per category)
+- carryovers (tracking week-to-week)
+- achievements (empty, for future use)
+
+✅ **Categories**: 8 active categories
+- 🏠 Housing
+- 🍽️ Food & Dining
+- 🚗 Transportation
+- 🎬 Entertainment
+- 🛍️ Shopping
+- ⚕️ Healthcare
+- 💡 Utilities
+- 📱 Subscriptions
+
+✅ **Weekly Budgets**: Calculated for current week
+- Weekly limits based on monthly ceiling / 4.33
+- Carryover from previous week (if applicable)
+- Current spending tracked
+- Status indicators (good, warning, critical, over)
+
+## Example API Response
+
+```json
+{
+  "budgets": [
+    {
+      "categoryName": "Food & Dining",
+      "categoryEmoji": "🍽️",
+      "weeklyLimit": 184.56,
+      "spent": 125.50,
+      "remaining": 59.06,
+      "percentageUsed": 68.0,
+      "status": "good",
+      "carryover": 0,
+      "dailySafeToSpend": 14.77,
+      "message": "You're doing well! $59.06 remaining 👍"
+    }
+  ],
+  "summary": {
+    "totalLimit": 923.08,
+    "totalSpent": 456.75,
+    "totalRemaining": 466.33,
+    "overallPercentage": 49.5,
+    "categoriesCount": 8,
+    "categoriesOverBudget": 0,
+    "categoriesAtRisk": 1
+  }
+}
+```
+
+## Testing Different Scenarios
+
+### Test Threshold Alerts
+
+Upload transactions incrementally to trigger alerts:
+
+```bash
+# 1. Upload base transactions
+# 2. Add more transactions to reach 80% (info alert)
+# 3. Add more to reach 90% (warning alert)
+# 4. Add more to reach 100% (critical alert)
+
+# Check thresholds
+curl -X POST http://localhost:3000/api/budgets/check-thresholds \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "demo-user-id", "categoryId": "category-id-here"}'
+```
+
+### Test Carryover
+
+1. Upload `sample-data/transactions-current-week.csv`
+2. Check weekly budget status
+3. Note the spending vs. limit
+4. Wait for next week (or manually create next week's budget)
+5. Carryover should be calculated automatically
+
+### Test Duplicate Detection
+
+1. Upload `sample-data/transactions-full-month.csv`
+2. Upload `sample-data/transactions-with-duplicates.csv`
+3. System should detect 3 duplicates
+4. Only unique transactions imported
+
+## Common Commands
+
+```bash
+# View database in browser
+npx prisma studio
+
+# Reset database (WARNING: deletes all data)
+npm run db:reset
+
+# Run migrations
+npm run db:migrate
+
+# Seed sample data
+npm run db:seed
+
+# Check for errors
+npm run lint
+
+# Build for production
+npm run build
+```
+
+## Troubleshooting
+
+### "Cannot connect to database"
+
+1. Check PostgreSQL is running: `ps aux | grep postgres`
+2. Verify DATABASE_URL in .env
+3. Test connection: `psql -d financial_helm`
+
+### "Prisma Client not generated"
+
+```bash
+npx prisma generate
+```
+
+### "CSV upload fails"
+
+1. Check file format (Date, Description, Amount columns)
+2. Verify dates are in MM/DD/YYYY or YYYY-MM-DD format
+3. Ensure amounts use decimal notation (123.45)
+
+### "No budgets showing"
+
+1. Make sure you uploaded transactions first
+2. Run budget initialization: `POST /api/budgets/initialize`
+3. Check Prisma Studio for weekly_budgets table
+
+## Next Steps
+
+Now that you're set up, you can:
+
+1. **Explore the API**: See [API Documentation](#) (coming soon)
+2. **Build the UI**: Continue with Task 6 (WeeklyBudgetCoach UI)
+3. **Add More Features**: Implement Tasks 5-18
+4. **Customize**: Modify categories, add your own data
+
+## Need Help?
+
+- Check [DATABASE_SETUP.md](./DATABASE_SETUP.md) for detailed database setup
+- See [sample-data/README.md](./sample-data/README.md) for sample data info
+- Review [PROGRESS.md](./PROGRESS.md) for implementation status
+
 ---
 
-## 💡 Tips for Testing
-
-### Desktop Testing
-1. Open in browser: http://localhost:3000
-2. Try different viewport sizes (resize window)
-3. Test all navigation links
-4. Check hover effects on cards and buttons
-
-### Mobile Testing
-1. Open DevTools (F12)
-2. Toggle device toolbar
-3. Select iPhone or Android device
-4. Test hamburger menu
-5. Verify touch interactions
-
-### Features to Test
-- ✅ Navigation between pages
-- ✅ Mobile menu toggle
-- ✅ Transaction filters
-- ✅ Search functionality
-- ✅ Progress bars animation
-- ✅ Button hover states
-- ✅ Card interactions
-
----
-
-## 🎉 You're All Set!
-
-Financial Helm MVP is ready to go! You now have:
-- ✅ Fully functional homepage
-- ✅ Complete dashboard
-- ✅ Transaction management
-- ✅ Budget tracking
-- ✅ Goal monitoring
-- ✅ Responsive design
-- ✅ Modern UI components
-- ✅ Comprehensive documentation
-
-**Ready to guide your personal finances! ⎈**
-
----
-
-For detailed information, see:
-- [README.md](./README.md) - Project overview
-- [PROJECT_REQUIREMENTS.md](./PROJECT_REQUIREMENTS.md) - Requirements
-- [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md) - Development docs
-
-
-
-
+**Ready to build?** Continue with Task 6 to create the WeeklyBudgetCoach UI! 🚀
