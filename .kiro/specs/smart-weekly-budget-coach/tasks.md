@@ -57,29 +57,29 @@
     - Implement DELETE /api/categories/:id for archiving
     - _Requirements: 7.1, 7.9, 7.10_
 
-- [ ] 4. Implement budget calculation engine
-  - [ ] 4.1 Create BudgetCalculationService core logic
+- [x] 4. Implement budget calculation engine
+  - [x] 4.1 Create BudgetCalculationService core logic
     - Implement calculateMonthlyCeiling() using 3-month historical average
     - Build calculateWeeklyLimit() with formula: (monthlyCeiling / weeksInMonth) - carryover ± goals
     - Add calculateCarryover() to determine positive/negative carryover from previous week
     - Implement updateWeeklySpending() to track current week's spending
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
 
-  - [ ] 4.2 Build weekly budget initialization
+  - [x] 4.2 Build weekly budget initialization
     - Create job to calculate budgets for new week (runs every Monday)
     - Apply carryover from previous week automatically
     - Handle edge cases (first week, insufficient data)
     - Save weekly_budgets to database
     - _Requirements: 2.3, 2.4, 2.5, 2.9_
 
-  - [ ] 4.3 Implement real-time spending updates
+  - [x] 4.3 Implement real-time spending updates
     - Create updateWeeklySpending() method triggered on new transactions
     - Recalculate remaining budget instantly
     - Update weekly_budgets table
     - Trigger WebSocket event for UI update
     - _Requirements: 3.1, 3.2, 3.3, 3.9_
 
-  - [ ] 4.4 Add threshold detection system
+  - [x] 4.4 Add threshold detection system
     - Implement checkThresholds() to detect 80%, 90%, 100% spending levels
     - Create ThresholdAlert type with severity levels
     - Trigger notifications when thresholds are crossed

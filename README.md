@@ -40,7 +40,7 @@ Visit http://localhost:3000
 
 ## ✨ Features
 
-### Implemented (Beta v0.2)
+### Implemented (Beta v0.3)
 
 - ✅ **Database Schema** - PostgreSQL with Prisma ORM
 - ✅ **CSV Upload** - Import transactions from bank CSV files (4 formats supported)
@@ -49,6 +49,10 @@ Visit http://localhost:3000
 - ✅ **Auto-Categorization** - Intelligent keyword-based suggestions with scoring
 - ✅ **Duplicate Detection** - Prevents duplicate transaction imports
 - ✅ **Category Statistics** - Track spending by category with date filtering
+- ✅ **Budget Calculation Engine** - Weekly budget limits with carryover tracking
+- ✅ **Real-Time Spending Updates** - Automatic budget updates on transactions
+- ✅ **Threshold Alerts** - Smart notifications at 80%, 90%, 100% spending
+- ✅ **Empathetic Messaging** - Non-judgmental, supportive budget messages
 
 ### In Development
 
@@ -149,11 +153,12 @@ Private project - All rights reserved
 
 See [.kiro/specs/smart-weekly-budget-coach/tasks.md](./.kiro/specs/smart-weekly-budget-coach/tasks.md) for detailed implementation plan.
 
-**Current Progress**: 20% complete (3/18 tasks)
+**Current Progress**: 25% complete (4/18 tasks)
 - ✅ Task 1: Database schema
 - ✅ Task 2: CSV upload
 - ✅ Task 3: Category management
-- 🚧 Task 4: Budget calculation engine (Next)
+- ✅ Task 4: Budget calculation engine
+- 🚧 Task 6: WeeklyBudgetCoach UI (Next)
 
 ---
 

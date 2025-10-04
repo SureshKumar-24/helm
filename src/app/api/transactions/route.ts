@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { budgetCalculationService } from '@/services/BudgetCalculationService';
 
 // GET /api/transactions - Fetch transactions with optional filters
 export async function GET(request: NextRequest) {
@@ -153,6 +154,35 @@ export async function POST(request: NextRequest) {
         });
       })
     );
+
+    // Update weekly budgets for affected categories
+    const affectedCategories = new Set<string>();
+    for (const transaction of createdTransactions) {
+      if (transaction.categoryId && transaction.type === 'expense') {
+        affectedCategories.add(transaction.categoryId);
+      }
+    }
+
+    // Update spending for each affected category
+    for (const categoryId of affectedCategories) {
+      try {
+        // Get a transaction from this category to get the date
+        const sampleTransaction = createdTransactions.find(
+          t => t.categoryId === categoryId
+        );
+        if (sampleTransaction) {
+          await budgetCalculationService.updateWeeklySpending(
+            categoryId,
+            userId,
+            0, // Amount not needed, we recalculate from all transactions
+            sampleTransaction.date
+          );
+        }
+      } catch (error) {
+        console.error(`Failed to update budget for category ${categoryId}:`, error);
+        // Continue with other categories
+      }
+    }
 
     return NextResponse.json({
       success: true,

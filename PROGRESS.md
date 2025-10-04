@@ -112,9 +112,50 @@
 
 ---
 
+---
+
+### Task 4: Budget Calculation Engine ✓
+
+**What was built**:
+- BudgetCalculationService with core calculation logic
+- Weekly limit calculation with carryover support
+- Monthly ceiling calculation from historical data (3-month average)
+- Real-time spending tracking and updates
+- Threshold detection system (80%, 90%, 100%)
+- Weekly budget initialization
+- Empathetic message generation
+- Daily safe-to-spend calculator
+
+**Files created**:
+- `src/services/BudgetCalculationService.ts` - Core budget calculation service (500+ lines)
+- `src/app/api/budgets/route.ts` - Get weekly budget status
+- `src/app/api/budgets/initialize/route.ts` - Initialize weekly budgets
+- `src/app/api/budgets/check-thresholds/route.ts` - Check spending thresholds
+- Updated `src/app/api/transactions/route.ts` - Auto-update budgets on transaction creation
+
+**Features**:
+- ✅ Weekly limit calculation: `(monthlyCeiling / 4.33) + carryover`
+- ✅ Positive carryover (unspent amounts roll forward)
+- ✅ Negative carryover (overspending reduces next week's limit)
+- ✅ Real-time spending updates
+- ✅ Threshold alerts (80%, 90%, 100%)
+- ✅ Status indicators (good, warning, critical, over)
+- ✅ Daily safe-to-spend calculation
+- ✅ Empathetic messaging system
+- ✅ Overall budget summary statistics
+
+**How it works**:
+1. Weekly budgets are initialized at start of week
+2. Transactions automatically update weekly spending
+3. Carryover is calculated from previous week
+4. Thresholds are checked after each transaction
+5. Status and messages update in real-time
+
+---
+
 ## 📋 Next Tasks (Priority Order)
 
-### Task 4: Budget Calculation Engine
+### Task 5: Carryover Tracking System
 **Priority**: HIGH - Core feature logic
 
 **What needs to be built**:
@@ -147,10 +188,11 @@
 - Design: ✅ Complete architecture and data models
 - Tasks: ✅ 18 main tasks with 60+ sub-tasks
 
-**Implementation Phase**: 🚧 In Progress (20% complete)
+**Implementation Phase**: 🚧 In Progress (25% complete)
 - ✅ Task 1: Database schema (100%)
 - ✅ Task 2: CSV upload (100%)
 - ✅ Task 3: Category management (100%)
+- ✅ Task 4: Budget calculation engine (100%)
 - ⏳ Task 4: Budget calculation (0%)
 - ⏳ Task 5: Carryover tracking (0%)
 - ⏳ Task 6: UI components (0%)
@@ -164,9 +206,9 @@
 
 ## 🎯 Current Focus
 
-**Active Task**: Task 3 ✅ COMPLETE
+**Active Task**: Task 4 ✅ COMPLETE
 
-**Next Up**: Task 4 - Budget Calculation Engine
+**Next Up**: Task 6 - WeeklyBudgetCoach UI Component (Skip Task 5 for now)
 
 **Blockers**: None - ready to proceed
 
@@ -229,4 +271,4 @@ To continue implementation:
 ---
 
 **Last Updated**: 2025-04-10
-**Status**: Tasks 1-3 Complete ✅ | Ready for Task 4 🚀
+**Status**: Tasks 1-4 Complete ✅ | Ready for Task 6 (UI) 🚀
