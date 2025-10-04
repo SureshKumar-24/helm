@@ -19,7 +19,19 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
   const [showReview, setShowReview] = useState(false);
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [selectedSampleFile, setSelectedSampleFile] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sample files available for quick testing
+  const sampleFiles = [
+    { value: '', label: 'Choose a sample file...' },
+    { value: 'sample-transactions.csv', label: '📄 Quick Test (15 transactions)' },
+    { value: 'sample-data/transactions-full-month.csv', label: '📅 Full Month (40 transactions) - Recommended' },
+    { value: 'sample-data/transactions-3-months.csv', label: '📊 3 Months History (56 transactions)' },
+    { value: 'sample-data/transactions-chase-format.csv', label: '🏦 Chase Bank Format (40 transactions)' },
+    { value: 'sample-data/transactions-with-duplicates.csv', label: '🔄 With Duplicates (24 transactions)' },
+    { value: 'sample-data/transactions-current-week.csv', label: '📆 Current Week Only (14 transactions)' },
+  ];
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -51,6 +63,32 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
       await processFile(file);
     }
   }, []);
+
+  const handleSampleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const filePath = e.target.value;
+    setSelectedSampleFile(filePath);
+
+    if (!filePath) return;
+
+    try {
+      // Fetch the sample file from the public directory
+      const response = await fetch(`/${filePath}`);
+      if (!response.ok) {
+        throw new Error('Failed to load sample file');
+      }
+
+      const text = await response.text();
+      
+      // Create a File object from the text
+      const blob = new Blob([text], { type: 'text/csv' });
+      const file = new File([blob], filePath.split('/').pop() || 'sample.csv', { type: 'text/csv' });
+
+      await processFile(file);
+    } catch (error) {
+      console.error('Error loading sample file:', error);
+      onError('Failed to load sample file. Make sure the file exists in the public directory.');
+    }
+  }, [onError]);
 
   const processFile = async (file: File) => {
     setIsProcessing(true);
@@ -380,10 +418,10 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
                 className="hidden"
                 id="csv-upload"
               />
-              <label htmlFor="csv-upload">
-                <Button variant="secondary" as="span">
+              <label htmlFor="csv-upload" className="cursor-pointer">
+                <span className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">
                   Choose File
-                </Button>
+                </span>
               </label>
               <div className="mt-6 text-xs text-gray-500">
                 <p>Supported formats: Chase, Bank of America, Wells Fargo, Generic CSV</p>
@@ -391,6 +429,38 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
               </div>
             </>
           )}
+        </div>
+
+        {/* Divider */}
+        <div className="mt-6 flex items-center">
+          <div className="flex-1 border-t border-gray-300"></div>
+          <span className="px-4 text-sm text-gray-500 font-medium">OR</span>
+          <div className="flex-1 border-t border-gray-300"></div>
+        </div>
+
+        {/* Sample Files Dropdown */}
+        <div className="mt-6 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">🎯</span>
+            <label htmlFor="sample-file-select" className="block text-sm font-semibold text-gray-900">
+              Try a Sample File (Quick Start)
+            </label>
+          </div>
+          <select
+            id="sample-file-select"
+            value={selectedSampleFile}
+            onChange={handleSampleFileSelect}
+            className="w-full px-4 py-3 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 font-medium"
+          >
+            {sampleFiles.map((file) => (
+              <option key={file.value} value={file.value}>
+                {file.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-gray-600">
+            ✨ Pre-loaded with realistic transaction data • Perfect for testing • No file upload needed
+          </p>
         </div>
 
         {/* Help Section */}
