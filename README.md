@@ -1,210 +1,160 @@
-# 🎯 Financial Helm
+# Financial Helm
 
-**Guiding Your Personal Finances**
+An AI-powered personal finance management platform that helps users manage their budgets with empathy and intelligence.
 
-A modern, intuitive personal finance management application built with Next.js, React, and Tailwind CSS. Financial Helm helps you track expenses, manage budgets, and achieve your financial goals with confidence.
-
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Next.js](https://img.shields.io/badge/Next.js-15.5.4-black)
-![React](https://img.shields.io/badge/React-19.1.0-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-
-## ✨ Features
-
-### MVP (Current Version)
-- 📊 **Smart Dashboard** - Complete financial overview with intuitive charts
-- 💰 **Transaction Tracking** - Easy income and expense management
-- 🎯 **Budget Management** - Set and monitor spending limits by category
-- 📈 **Financial Goals** - Track progress toward your savings targets
-- 📱 **Responsive Design** - Works seamlessly on all devices
-- 🔒 **Privacy First** - All data stored locally (for MVP)
-
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 20+ (LTS recommended)
-- npm, yarn, pnpm, or bun
+
+- Node.js 18+ 
+- PostgreSQL 15+
+- npm or yarn
 
 ### Installation
 
-1. **Clone the repository**
 ```bash
-git clone <repository-url>
-cd helm
-```
-
-2. **Install dependencies**
-```bash
+# Install dependencies
 npm install
-# or
-yarn install
-# or
-pnpm install
-```
 
-3. **Run the development server**
-```bash
+# Set up environment variables
+cp .env.example .env
+# Edit .env and set your DATABASE_URL
+
+# Set up database
+npx prisma generate
+npx prisma migrate dev --name init
+npm run db:seed  # Optional: adds sample data
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
-4. **Open your browser**
-Navigate to [http://localhost:3000](http://localhost:3000)
+Visit http://localhost:3000
+
+## 📚 Documentation
+
+- **[PROGRESS.md](./PROGRESS.md)** - Current implementation progress and completed tasks
+- **[DATABASE_SETUP.md](./DATABASE_SETUP.md)** - Detailed database setup guide
+- **[INSTALLATION.md](./INSTALLATION.md)** - Step-by-step installation instructions
+- **[.kiro/specs/smart-weekly-budget-coach/](./.kiro/specs/smart-weekly-budget-coach/)** - Feature specifications
+
+## ✨ Features
+
+### Implemented (Beta v0.2)
+
+- ✅ **Database Schema** - PostgreSQL with Prisma ORM
+- ✅ **CSV Upload** - Import transactions from bank CSV files (4 formats supported)
+- ✅ **Transaction Management** - Full CRUD operations with API
+- ✅ **Category Management** - Advanced categorization with 100+ keywords
+- ✅ **Auto-Categorization** - Intelligent keyword-based suggestions with scoring
+- ✅ **Duplicate Detection** - Prevents duplicate transaction imports
+- ✅ **Category Statistics** - Track spending by category with date filtering
+
+### In Development
+
+- 🚧 **Smart Weekly Budget Coach** - AI-powered weekly spending limits
+- 🚧 **Category Management** - Advanced categorization with ML
+- 🚧 **Budget Calculation Engine** - Real-time budget tracking
+- 🚧 **Weekly Motivational Check** - Empathetic progress updates
+- 🚧 **Major Expense Forecasts** - Predict upcoming large expenses
+
+## 🏗️ Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: PostgreSQL
+- **UI Components**: Custom component library
+- **Icons**: Lucide React, React Icons
 
 ## 📁 Project Structure
 
 ```
-helm/
+financial-helm/
 ├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── dashboard/          # Dashboard page
-│   │   ├── transactions/       # Transaction management
-│   │   ├── budgets/            # Budget tracking
-│   │   ├── goals/              # Financial goals
-│   │   ├── layout.tsx          # Root layout with navigation
-│   │   ├── page.tsx            # Homepage
-│   │   └── globals.css         # Global styles
-│   ├── components/
-│   │   ├── ui/                 # Reusable UI components
-│   │   │   ├── Button.tsx
-│   │   │   └── Card.tsx
-│   │   └── Navigation.tsx      # Main navigation component
-│   └── types/
-│       └── index.ts            # TypeScript type definitions
-├── public/                     # Static assets
-├── PROJECT_REQUIREMENTS.md     # Detailed project requirements
-├── DESIGN_SYSTEM.md           # Design system documentation
-└── package.json
+│   ├── app/              # Next.js app directory
+│   │   ├── api/          # API routes
+│   │   ├── dashboard/    # Dashboard page
+│   │   ├── budgets/      # Budgets page
+│   │   ├── goals/        # Goals page
+│   │   └── transactions/ # Transactions page
+│   ├── components/       # React components
+│   │   └── ui/           # UI components
+│   ├── services/         # Business logic services
+│   ├── lib/              # Utilities and helpers
+│   └── types/            # TypeScript type definitions
+├── prisma/
+│   ├── schema.prisma     # Database schema
+│   └── seed.ts           # Database seeding
+├── .kiro/
+│   └── specs/            # Feature specifications
+└── public/               # Static assets
 ```
 
-## 🎨 Design System
+## 🧪 Testing
 
-### Color Palette
-- **Primary (Navy Blue)**: `#0A3D62` - Trust & stability
-- **Success (Green)**: `#22C55E` - Income & positive growth
-- **Danger (Red)**: `#EF4444` - Expenses & warnings
-- **Info (Blue)**: `#3B82F6` - Information
-- **Warning (Amber)**: `#F59E0B` - Approaching limits
+### Test CSV Upload
 
-### Typography
-- **Font**: Inter (Google Fonts)
-- **Sizes**: Responsive, mobile-first approach
-- **Weights**: 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
-
-See [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) for complete design guidelines.
-
-## 📖 Documentation
-
-- **[PROJECT_REQUIREMENTS.md](./PROJECT_REQUIREMENTS.md)** - Complete MVP requirements and roadmap
-- **[DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)** - Design guidelines and component library
-
-## 🛠️ Tech Stack
-
-- **Framework**: [Next.js 15](https://nextjs.org/) with App Router
-- **UI Library**: [React 19](https://react.dev/)
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **Language**: [TypeScript 5](https://www.typescriptlang.org/)
-- **Linting**: ESLint with Next.js config
-
-## 📱 Key Pages
-
-### 🏠 Homepage (`/`)
-- Hero section with value proposition
-- Feature showcase
-- Call-to-action buttons
-
-### 📊 Dashboard (`/dashboard`)
-- Financial summary cards (balance, income, expenses, savings rate)
-- Spending by category visualization
-- Recent transactions
-- Quick action buttons
-
-### 💳 Transactions (`/transactions`)
-- Transaction list with filtering
-- Add/Edit/Delete transactions
-- Search functionality
-- Category breakdown
-
-### 💰 Budgets (`/budgets`)
-- Budget overview and progress
-- Category-wise budget tracking
-- Visual progress bars with warnings
-- Budget tips and suggestions
-
-### 🎯 Goals (`/goals`)
-- Savings goal tracking
-- Progress visualization
-- Target dates and suggestions
-- Goal achievement tips
-
-## 🔧 Development
-
-### Available Scripts
+Use the provided `sample-transactions.csv`:
 
 ```bash
-# Start development server
-npm run dev
+# Navigate to dashboard
+open http://localhost:3000/dashboard
 
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Run linter
-npm run lint
+# Click "Upload CSV" button
+# Upload sample-transactions.csv
+# Review and confirm import
 ```
 
-### Code Quality
-- TypeScript for type safety
-- ESLint for code quality
-- Consistent component patterns
-- Mobile-first responsive design
+### View Database
 
-## 🚧 Future Enhancements
+```bash
+# Open Prisma Studio
+npx prisma studio
+```
 
-### Phase 2
-- [ ] Bank account integration (Plaid API)
-- [ ] Recurring transactions
-- [ ] Bill reminders
-- [ ] Data export (CSV/PDF)
-- [ ] Dark mode
+## 📊 Database Schema
 
-### Phase 3
-- [ ] Multi-currency support
-- [ ] Family/team sharing
-- [ ] AI-powered insights
-- [ ] Investment tracking
-- [ ] Mobile app (React Native)
+- **users** - User accounts and preferences
+- **categories** - Spending categories
+- **transactions** - Financial transactions
+- **weekly_budgets** - Weekly budget limits and spending
+- **carryovers** - Week-to-week carryover tracking
+- **achievements** - User achievements and streaks
+
+## 🔧 Available Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+
+npm run db:generate  # Generate Prisma Client
+npm run db:migrate   # Run database migrations
+npm run db:push      # Push schema changes
+npm run db:studio    # Open Prisma Studio
+npm run db:seed      # Seed database with sample data
+npm run db:reset     # Reset database (WARNING: deletes all data)
+```
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+This project is currently in active development. See [PROGRESS.md](./PROGRESS.md) for current status and next tasks.
 
-## 📄 License
+## 📝 License
 
-This project is private and proprietary.
+Private project - All rights reserved
 
-## 👥 Team
+## 🎯 Roadmap
 
-Financial Helm - Guiding Your Personal Finances
+See [.kiro/specs/smart-weekly-budget-coach/tasks.md](./.kiro/specs/smart-weekly-budget-coach/tasks.md) for detailed implementation plan.
 
-## 🙏 Acknowledgments
-
-- Inspired by Mint, YNAB, and Monarch Money
-- Built with modern web technologies
-- Designed for simplicity and usability
+**Current Progress**: 20% complete (3/18 tasks)
+- ✅ Task 1: Database schema
+- ✅ Task 2: CSV upload
+- ✅ Task 3: Category management
+- 🚧 Task 4: Budget calculation engine (Next)
 
 ---
 
-**Made with ❤️ for better financial management**
-
-For questions or support, please open an issue or contact the team.
-# helm
+Built with ❤️ using Next.js and Prisma

@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import CSVUpload from '@/components/CSVUpload';
 import type { Transaction, FinancialSummary } from '@/types';
 
 export default function Dashboard() {
+  const [showCSVUpload, setShowCSVUpload] = useState(false);
   const [summary] = useState<FinancialSummary>({
     totalIncome: 5000,
     totalExpenses: 3250,
@@ -64,14 +66,44 @@ export default function Dashboard() {
     }).format(amount);
   };
 
+  const handleUploadComplete = (transactions: any[]) => {
+    console.log('Uploaded transactions:', transactions);
+    setShowCSVUpload(false);
+    // TODO: Refresh dashboard data
+    alert(`Successfully imported ${transactions.length} transactions! 🎉`);
+  };
+
+  const handleUploadError = (error: string) => {
+    console.error('Upload error:', error);
+    alert(`Error: ${error}`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#0A3D62] mb-2">Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-[#0A3D62] mb-2">Dashboard</h1>
+            <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
+          </div>
+          <button
+            onClick={() => setShowCSVUpload(!showCSVUpload)}
+            className="px-4 py-2 bg-[#0A3D62] text-white rounded-lg hover:bg-[#083048] transition"
+          >
+            {showCSVUpload ? 'Hide Upload' : '📤 Upload CSV'}
+          </button>
         </div>
+
+        {/* CSV Upload Section */}
+        {showCSVUpload && (
+          <div className="mb-8">
+            <CSVUpload
+              onUploadComplete={handleUploadComplete}
+              onError={handleUploadError}
+            />
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -254,6 +286,7 @@ export default function Dashboard() {
     </div>
   );
 }
+
 
 
 
