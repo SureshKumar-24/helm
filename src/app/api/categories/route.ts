@@ -104,7 +104,12 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updates: any = {};
+    const updates: {
+      name?: string;
+      emoji?: string;
+      monthlyCeiling?: number;
+      isActive?: boolean;
+    } = {};
     if (name !== undefined) updates.name = name;
     if (emoji !== undefined) updates.emoji = emoji;
     if (monthlyCeiling !== undefined) updates.monthlyCeiling = monthlyCeiling;

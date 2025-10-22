@@ -113,7 +113,14 @@ export class CategoryService {
 
     const categoriesWithStats = await Promise.all(
       categories.map(async (category) => {
-        const where: any = {
+        const where: {
+          userId: string;
+          categoryId: string;
+          date?: {
+            gte?: Date;
+            lte?: Date;
+          };
+        } = {
           userId,
           categoryId: category.id,
         };

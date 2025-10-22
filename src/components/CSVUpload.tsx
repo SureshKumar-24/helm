@@ -159,10 +159,15 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
       }
 
       const data = await response.json();
-      return data.transactions.map((t: any) => ({
+      return data.transactions.map((t: {
+        date: string;
+        description: string;
+        amount: string | number;
+        type: string;
+      }) => ({
         date: new Date(t.date).toISOString().split('T')[0],
         description: t.description,
-        amount: parseFloat(t.amount),
+        amount: typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount,
         type: t.type,
       }));
     } catch (error) {
@@ -232,7 +237,8 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-    } catch (error) {
+    } catch (err) {
+      console.error('Failed to save transactions:', err);
       onError('Failed to save transactions');
     }
   };

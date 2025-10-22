@@ -78,6 +78,10 @@ export class CSVParserService {
     // Detect format
     const format = this.detectFormat(headers);
     
+    if (!format) {
+      throw new Error('Could not detect CSV format. Required columns: date, description, amount');
+    }
+    
     // Parse data rows
     const transactions: ParsedTransaction[] = [];
     

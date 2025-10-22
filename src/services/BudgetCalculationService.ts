@@ -6,7 +6,6 @@
  */
 
 import { prisma } from '@/lib/prisma';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export interface WeeklyBudgetStatus {
   id: string;
@@ -289,7 +288,7 @@ export class BudgetCalculationService {
       const dailySafeToSpend = daysRemaining > 0 ? remaining / daysRemaining : remaining;
 
       // Generate empathetic message
-      const message = this.generateMessage(status, remaining, percentageUsed, category.name);
+      const message = this.generateMessage(status, remaining, percentageUsed);
 
       statuses.push({
         id: weeklyBudget.id,
@@ -481,8 +480,7 @@ export class BudgetCalculationService {
   private generateMessage(
     status: 'good' | 'warning' | 'critical' | 'over',
     remaining: number,
-    percentageUsed: number,
-    categoryName: string
+    percentageUsed: number
   ): string {
     const formattedRemaining = this.formatCurrency(Math.abs(remaining));
 

@@ -20,7 +20,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause
-    const where: any = { userId };
+    const where: {
+      userId: string;
+      categoryId?: string;
+      type?: string;
+      date?: {
+        gte?: Date;
+        lte?: Date;
+      };
+    } = { userId };
 
     if (categoryId) {
       where.categoryId = categoryId;
@@ -135,7 +143,14 @@ export async function POST(request: NextRequest) {
 
     // Create transactions
     const createdTransactions = await prisma.$transaction(
-      transactions.map((transaction: any) => {
+      transactions.map((transaction: {
+        date: string;
+        description: string;
+        amount: number;
+        type: string;
+        category?: string;
+        notes?: string;
+      }) => {
         const categoryId = transaction.category 
           ? categoryMap.get(transaction.category) 
           : null;

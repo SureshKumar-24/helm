@@ -66,7 +66,7 @@ export default function Dashboard() {
     }).format(amount);
   };
 
-  const handleUploadComplete = (transactions: any[]) => {
+  const handleUploadComplete = (transactions: unknown[]) => {
     console.log('Uploaded transactions:', transactions);
     setShowCSVUpload(false);
     // TODO: Refresh dashboard data
@@ -286,6 +286,8 @@ export default function Dashboard() {
     </div>
   );
 }
+
+
 
 
 
