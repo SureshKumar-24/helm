@@ -1,65 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import type { Transaction } from '@/types';
+import type { ParsedTransaction } from '@/services/CSVParserService';
 
-export default function Transactions() {
-  const [transactions] = useState<Transaction[]>([
-    {
-      id: '1',
-      date: '2025-10-01',
-      description: 'Salary Deposit',
-      amount: 5000,
-      category: 'Income',
-      type: 'income',
-      notes: 'Monthly salary',
-    },
-    {
-      id: '2',
-      date: '2025-09-30',
-      description: 'Rent Payment',
-      amount: 1200,
-      category: 'Housing',
-      type: 'expense',
-    },
-    {
-      id: '3',
-      date: '2025-09-29',
-      description: 'Grocery Store',
-      amount: 85.50,
-      category: 'Food & Dining',
-      type: 'expense',
-    },
-    {
-      id: '4',
-      date: '2025-09-28',
-      description: 'Gas Station',
-      amount: 45,
-      category: 'Transportation',
-      type: 'expense',
-    },
-    {
-      id: '5',
-      date: '2025-09-27',
-      description: 'Netflix Subscription',
-      amount: 15.99,
-      category: 'Entertainment',
-      type: 'expense',
-    },
-    {
-      id: '6',
-      date: '2025-09-26',
-      description: 'Freelance Project',
-      amount: 500,
-      category: 'Income',
-      type: 'income',
-    },
-  ]);
-
+export default function TransactionsPage() {
+  const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    // Load transactions from localStorage
+    const stored = localStorage.getItem('transactions');
+    if (stored) {
+      setTransactions(JSON.parse(stored));
+    }
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -68,12 +23,10 @@ export default function Transactions() {
     }).format(amount);
   };
 
-  const filteredTransactions = transactions
-    .filter((t) => filter === 'all' || t.type === filter)
-    .filter((t) =>
-      t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  const filteredTransactions = transactions.filter((t) => {
+    if (filter === 'all') return true;
+    return t.type === filter;
+  });
 
   const totalIncome = transactions
     .filter((t) => t.type === 'income')
@@ -86,150 +39,169 @@ export default function Transactions() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#0A3D62] mb-2">Transactions</h1>
-          <p className="text-gray-600">Track and manage all your financial transactions.</p>
+          <p className="text-gray-600">View and manage all your transactions</p>
         </div>
 
         {/* Summary Cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardContent>
-              <p className="text-sm text-gray-600 mb-1">Total Income</p>
-              <p className="text-2xl font-bold text-[#22C55E]">{formatCurrency(totalIncome)}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Income</p>
+                  <p className="text-2xl font-bold text-[#22C55E]">
+                    {formatCurrency(totalIncome)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-[#22C55E]/10 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">📈</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
+
           <Card>
             <CardContent>
-              <p className="text-sm text-gray-600 mb-1">Total Expenses</p>
-              <p className="text-2xl font-bold text-[#EF4444]">{formatCurrency(totalExpenses)}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Expenses</p>
+                  <p className="text-2xl font-bold text-[#EF4444]">
+                    {formatCurrency(totalExpenses)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-[#EF4444]/10 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">📉</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
+
           <Card>
             <CardContent>
-              <p className="text-sm text-gray-600 mb-1">Net Balance</p>
-              <p className="text-2xl font-bold text-[#0A3D62]">
-                {formatCurrency(totalIncome - totalExpenses)}
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Net Balance</p>
+                  <p className="text-2xl font-bold text-[#0A3D62]">
+                    {formatCurrency(totalIncome - totalExpenses)}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-[#0A3D62]/10 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">💰</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters and Search */}
-        <Card className="mb-8">
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <div className="flex gap-2 w-full md:w-auto">
-                <Button
-                  size="sm"
-                  variant={filter === 'all' ? 'primary' : 'ghost'}
-                  onClick={() => setFilter('all')}
-                >
-                  All
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filter === 'income' ? 'secondary' : 'ghost'}
-                  onClick={() => setFilter('income')}
-                >
-                  Income
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filter === 'expense' ? 'outline' : 'ghost'}
-                  onClick={() => setFilter('expense')}
-                >
-                  Expenses
-                </Button>
-              </div>
-
-              <div className="flex gap-4 w-full md:w-auto">
-                <input
-                  type="text"
-                  placeholder="Search transactions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
-                />
-                <Button size="md" variant="secondary">
-                  + Add New
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Filters */}
+        <div className="mb-6 flex gap-3">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              filter === 'all'
+                ? 'bg-[#0A3D62] text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            All ({transactions.length})
+          </button>
+          <button
+            onClick={() => setFilter('income')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              filter === 'income'
+                ? 'bg-[#22C55E] text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            Income ({transactions.filter((t) => t.type === 'income').length})
+          </button>
+          <button
+            onClick={() => setFilter('expense')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              filter === 'expense'
+                ? 'bg-[#EF4444] text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            Expenses ({transactions.filter((t) => t.type === 'expense').length})
+          </button>
+        </div>
 
         {/* Transactions List */}
         <Card>
           <CardHeader>
-            <CardTitle>Transaction History ({filteredTransactions.length})</CardTitle>
+            <CardTitle>
+              {filter === 'all' ? 'All Transactions' : filter === 'income' ? 'Income' : 'Expenses'} (
+              {filteredTransactions.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {filteredTransactions.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No transactions found</p>
-                <p className="text-gray-400 text-sm mt-2">Try adjusting your filters or add a new transaction</p>
+                <p className="text-gray-500 text-lg mb-2">No transactions yet</p>
+                <p className="text-gray-400 text-sm">Upload a CSV file to get started</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {filteredTransactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition group"
-                  >
-                    <div className="flex items-center space-x-4 flex-1">
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${
-                          transaction.type === 'income'
-                            ? 'bg-[#22C55E]/10 text-[#22C55E]'
-                            : 'bg-[#EF4444]/10 text-[#EF4444]'
-                        }`}
-                      >
-                        {transaction.type === 'income' ? '↑' : '↓'}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{transaction.description}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-sm text-gray-500">{transaction.category}</span>
-                          <span className="text-sm text-gray-400">•</span>
-                          <span className="text-sm text-gray-500">
-                            {new Date(transaction.date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Description
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Category
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Type
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                        Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredTransactions.map((transaction, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {transaction.description}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {transaction.category || 'Uncategorized'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${
+                              transaction.type === 'income'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {transaction.type}
                           </span>
-                        </div>
-                        {transaction.notes && (
-                          <p className="text-xs text-gray-400 mt-1">{transaction.notes}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span
-                        className={`text-lg font-bold ${
-                          transaction.type === 'income' ? 'text-[#22C55E]' : 'text-[#EF4444]'
-                        }`}
-                      >
-                        {transaction.type === 'income' ? '+' : '-'}
-                        {formatCurrency(transaction.amount)}
-                      </span>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                        <button className="text-[#0A3D62] hover:text-[#083048] p-2">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button className="text-[#EF4444] hover:text-[#DC2626] p-2">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-right">
+                          <span
+                            className={
+                              transaction.type === 'income' ? 'text-[#22C55E]' : 'text-[#EF4444]'
+                            }
+                          >
+                            {transaction.type === 'income' ? '+' : '-'}
+                            {formatCurrency(transaction.amount)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
@@ -238,9 +210,3 @@ export default function Transactions() {
     </div>
   );
 }
-
-
-
-
-
-

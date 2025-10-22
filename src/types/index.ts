@@ -11,16 +11,18 @@ export interface Transaction {
 }
 
 export type Category =
-  | 'Housing'
-  | 'Transportation'
-  | 'Food & Dining'
   | 'Entertainment'
-  | 'Healthcare'
-  | 'Shopping'
-  | 'Education'
-  | 'Savings'
+  | 'Music'
+  | 'Video Streaming'
+  | 'Software/Cloud'
+  | 'Communications'
+  | 'Utilities'
+  | 'Travel/Transport'
+  | 'Groceries'
+  | 'Health/Wellness'
+  | 'Miscellaneous'
   | 'Income'
-  | 'Other';
+  | 'Uncategorized';
 
 export interface Budget {
   id: string;
