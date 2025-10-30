@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import type { ParsedTransaction } from '@/services/CSVParserService';
 
-export default function TransactionsPage() {
+function TransactionsContent() {
   const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
 
@@ -208,5 +209,13 @@ export default function TransactionsPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <ProtectedRoute>
+      <TransactionsContent />
+    </ProtectedRoute>
   );
 }

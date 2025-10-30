@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { validateEnvironment } from "@/lib/env";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,6 +31,11 @@ export const metadata: Metadata = {
   },
 };
 
+// Validate environment variables on app start
+if (typeof window === 'undefined') {
+  validateEnvironment();
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -48,9 +55,11 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
       </head>
       <body className={`${inter.className} antialiased bg-gray-50`}>
-        <Navigation />
-        {children}
-        <PWAUpdatePrompt />
+        <AuthProvider>
+          <Navigation />
+          {children}
+          <PWAUpdatePrompt />
+        </AuthProvider>
       </body>
     </html>
   );

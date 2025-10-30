@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import type { FinancialGoal } from '@/types';
 
-export default function Goals() {
+function GoalsContent() {
   const [goals] = useState<FinancialGoal[]>([
     {
       id: '1',
@@ -289,3 +290,11 @@ export default function Goals() {
 
 
 
+
+export default function Goals() {
+  return (
+    <ProtectedRoute>
+      <GoalsContent />
+    </ProtectedRoute>
+  );
+}

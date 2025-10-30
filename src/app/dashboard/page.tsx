@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import CSVUpload from '@/components/CSVUpload';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import type { Transaction, FinancialSummary } from '@/types';
 
-export default function Dashboard() {
+function DashboardContent() {
   const [showCSVUpload, setShowCSVUpload] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<FinancialSummary>({
@@ -334,6 +335,14 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }
 

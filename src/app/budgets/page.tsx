@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import type { Budget } from '@/types';
 
-export default function Budgets() {
+function BudgetsContent() {
   const [budgets] = useState<Budget[]>([
     {
       id: '1',
@@ -264,3 +265,11 @@ export default function Budgets() {
 
 
 
+
+export default function Budgets() {
+  return (
+    <ProtectedRoute>
+      <BudgetsContent />
+    </ProtectedRoute>
+  );
+}

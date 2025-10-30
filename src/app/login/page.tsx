@@ -2,19 +2,59 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, LogIn, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, LogIn, Sparkles, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { validateEmail } from '@/lib/auth/validation';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  const { login, error: authError } = useAuth();
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login:', { email, password, rememberMe });
+    setValidationErrors({});
+    
+    // Frontend validation
+    const errors: Record<string, string> = {};
+    
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      errors.email = emailValidation.errors[0];
+    }
+    
+    if (!password) {
+      errors.password = 'Password is required';
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      await login(email, password);
+      
+      // Check for return URL
+      const returnUrl = sessionStorage.getItem('returnUrl') || '/dashboard';
+      sessionStorage.removeItem('returnUrl');
+      
+      router.push(returnUrl);
+    } catch (err) {
+      console.error('Login error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -75,6 +115,18 @@ export default function Login() {
             </p>
           </motion.div>
 
+          {/* Error message */}
+          {authError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-800">{authError}</p>
+            </motion.div>
+          )}
+
           {/* Login form */}
           <motion.form
             initial={{ opacity: 0 }}
@@ -96,12 +148,21 @@ export default function Login() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent transition-all outline-none"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setValidationErrors(prev => ({ ...prev, email: '' }));
+                  }}
+                  disabled={isSubmitting}
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-xl focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent transition-all outline-none ${
+                    validationErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="you@example.com"
                   required
                 />
               </div>
+              {validationErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
+              )}
             </div>
 
             {/* Password field */}
@@ -117,14 +178,21 @@ export default function Login() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent transition-all outline-none"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setValidationErrors(prev => ({ ...prev, password: '' }));
+                  }}
+                  disabled={isSubmitting}
+                  className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent transition-all outline-none ${
+                    validationErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={isSubmitting}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showPassword ? (
@@ -134,6 +202,9 @@ export default function Login() {
                   )}
                 </button>
               </div>
+              {validationErrors.password && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.password}</p>
+              )}
             </div>
 
             {/* Remember me and forgot password */}
@@ -157,15 +228,27 @@ export default function Login() {
 
             {/* Submit button */}
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={!isSubmitting ? { scale: 1.02 } : {}}
+              whileTap={!isSubmitting ? { scale: 0.98 } : {}}
             >
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#0A3D62] to-[#0f5280] text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transform transition-all duration-200"
+                disabled={isSubmitting}
+                className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#0A3D62] to-[#0f5280] text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transform transition-all duration-200 ${
+                  isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
-                <LogIn className="w-5 h-5" />
-                Sign In
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Signing In...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5" />
+                    Sign In
+                  </>
+                )}
               </button>
             </motion.div>
           </motion.form>

@@ -2,38 +2,88 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, User, CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, CheckCircle2, Sparkles, ArrowRight, AlertCircle, Check, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  validateEmail,
+  validatePassword,
+  validatePasswordMatch,
+  checkPasswordStrength,
+  getPasswordStrengthLabel,
+  getPasswordStrengthColor,
+} from '@/lib/auth/validation';
 
 export default function Register() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  const { register, error: authError } = useAuth();
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const passwordStrength = checkPasswordStrength(password);
+  const passwordValidation = validatePassword(password);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Register:', formData);
+    setValidationErrors({});
+    
+    // Frontend validation
+    const errors: Record<string, string> = {};
+    
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      errors.email = emailValidation.errors[0];
+    }
+    
+    if (!passwordValidation.isValid) {
+      errors.password = passwordValidation.errors[0];
+    }
+    
+    const matchValidation = validatePasswordMatch(password, confirmPassword);
+    if (!matchValidation.isValid) {
+      errors.confirmPassword = matchValidation.errors[0];
+    }
+    
+    if (!agreeTerms) {
+      errors.terms = 'You must agree to the terms and conditions';
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      await register(email, password);
+      
+      // Redirect to dashboard after successful registration
+      router.push('/dashboard');
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      
+      // Handle validation errors from API
+      if (err.response?.data?.detail && Array.isArray(err.response.data.detail)) {
+        const apiErrors: Record<string, string> = {};
+        err.response.data.detail.forEach((error: any) => {
+          const field = error.loc[error.loc.length - 1];
+          apiErrors[field] = error.msg;
+        });
+        setValidationErrors(apiErrors);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const passwordStrength = (password: string) => {
-    if (password.length === 0) return 0;
-    if (password.length < 6) return 25;
-    if (password.length < 8) return 50;
-    if (password.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)) return 100;
-    return 75;
-  };
-
-  const strength = passwordStrength(formData.password);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#22C55E] via-[#0A3D62] to-[#8B5CF6] flex items-center justify-center p-4">
@@ -78,6 +128,18 @@ export default function Register() {
             <p className="text-gray-600">Start your journey to financial freedom</p>
           </motion.div>
 
+          {/* Error message */}
+          {authError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4"
+            >
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-800">{authError}</p>
+            </motion.div>
+          )}
+
           {/* Form */}
           <motion.form
             initial={{ opacity: 0 }}
@@ -86,28 +148,6 @@ export default function Register() {
             onSubmit={handleSubmit}
             className="space-y-4"
           >
-            {/* Name field */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none"
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-            </div>
-
             {/* Email field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -119,15 +159,23 @@ export default function Register() {
                 </div>
                 <input
                   id="email"
-                  name="email"
                   type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setValidationErrors(prev => ({ ...prev, email: '' }));
+                  }}
+                  disabled={isSubmitting}
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${
+                    validationErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="you@example.com"
                   required
                 />
               </div>
+              {validationErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
+              )}
             </div>
 
             {/* Password field */}
@@ -141,17 +189,23 @@ export default function Register() {
                 </div>
                 <input
                   id="password"
-                  name="password"
                   type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setValidationErrors(prev => ({ ...prev, password: '' }));
+                  }}
+                  disabled={isSubmitting}
+                  className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${
+                    validationErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={isSubmitting}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showPassword ? (
@@ -161,38 +215,79 @@ export default function Register() {
                   )}
                 </button>
               </div>
+              
               {/* Password strength indicator */}
-              {formData.password && (
+              {password && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="mt-2"
                 >
-                  <div className="flex gap-1 mb-1">
-                    {[25, 50, 75, 100].map((level) => (
+                  <div className="flex gap-1 mb-2">
+                    {[1, 2, 3, 4].map((level) => (
                       <div
                         key={level}
-                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                          strength >= level
-                            ? level === 25
-                              ? 'bg-red-500'
-                              : level === 50
-                              ? 'bg-orange-500'
-                              : level === 75
-                              ? 'bg-yellow-500'
-                              : 'bg-green-500'
-                            : 'bg-gray-200'
-                        }`}
+                        className="h-1.5 flex-1 rounded-full transition-all duration-300"
+                        style={{
+                          backgroundColor: passwordStrength.score >= level 
+                            ? getPasswordStrengthColor(passwordStrength.score)
+                            : '#e5e7eb'
+                        }}
                       />
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500">
-                    {strength === 25 && 'Weak password'}
-                    {strength === 50 && 'Fair password'}
-                    {strength === 75 && 'Good password'}
-                    {strength === 100 && 'Strong password'}
+                  <p className="text-xs font-medium mb-2" style={{ color: getPasswordStrengthColor(passwordStrength.score) }}>
+                    {getPasswordStrengthLabel(passwordStrength.score)}
                   </p>
+                  
+                  {/* Password requirements checklist */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs">
+                      {password.length >= 8 ? (
+                        <Check className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <X className="w-3 h-3 text-gray-400" />
+                      )}
+                      <span className={password.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
+                        At least 8 characters
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      {/[A-Z]/.test(password) ? (
+                        <Check className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <X className="w-3 h-3 text-gray-400" />
+                      )}
+                      <span className={/[A-Z]/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                        One uppercase letter
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      {/[a-z]/.test(password) ? (
+                        <Check className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <X className="w-3 h-3 text-gray-400" />
+                      )}
+                      <span className={/[a-z]/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                        One lowercase letter
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      {/\d/.test(password) ? (
+                        <Check className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <X className="w-3 h-3 text-gray-400" />
+                      )}
+                      <span className={/\d/.test(password) ? 'text-green-600' : 'text-gray-500'}>
+                        One number
+                      </span>
+                    </div>
+                  </div>
                 </motion.div>
+              )}
+              
+              {validationErrors.password && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.password}</p>
               )}
             </div>
 
@@ -207,17 +302,23 @@ export default function Register() {
                 </div>
                 <input
                   id="confirmPassword"
-                  name="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setValidationErrors(prev => ({ ...prev, confirmPassword: '' }));
+                  }}
+                  disabled={isSubmitting}
+                  className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${
+                    validationErrors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={isSubmitting}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showConfirmPassword ? (
@@ -227,39 +328,63 @@ export default function Register() {
                   )}
                 </button>
               </div>
+              {validationErrors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.confirmPassword}</p>
+              )}
             </div>
 
             {/* Terms checkbox */}
-            <div className="flex items-start">
-              <input
-                type="checkbox"
-                checked={agreeTerms}
-                onChange={(e) => setAgreeTerms(e.target.checked)}
-                className="mt-1 w-4 h-4 text-[#22C55E] border-gray-300 rounded focus:ring-[#22C55E]"
-                required
-              />
-              <label className="ml-2 text-sm text-gray-600">
-                I agree to the{' '}
-                <Link href="/terms" className="text-[#0A3D62] hover:underline">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="text-[#0A3D62] hover:underline">
-                  Privacy Policy
-                </Link>
-              </label>
+            <div>
+              <div className="flex items-start">
+                <input
+                  type="checkbox"
+                  checked={agreeTerms}
+                  onChange={(e) => {
+                    setAgreeTerms(e.target.checked);
+                    setValidationErrors(prev => ({ ...prev, terms: '' }));
+                  }}
+                  disabled={isSubmitting}
+                  className="mt-1 w-4 h-4 text-[#22C55E] border-gray-300 rounded focus:ring-[#22C55E]"
+                  required
+                />
+                <label className="ml-2 text-sm text-gray-600">
+                  I agree to the{' '}
+                  <Link href="/terms" className="text-[#0A3D62] hover:underline">
+                    Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/privacy" className="text-[#0A3D62] hover:underline">
+                    Privacy Policy
+                  </Link>
+                </label>
+              </div>
+              {validationErrors.terms && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.terms}</p>
+              )}
             </div>
 
             {/* Submit button */}
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={!isSubmitting ? { scale: 1.02 } : {}}
+              whileTap={!isSubmitting ? { scale: 0.98 } : {}}
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+              disabled={isSubmitting}
+              className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 ${
+                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              <CheckCircle2 className="w-5 h-5" />
-              Create Account
-              <ArrowRight className="w-5 h-5" />
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Creating Account...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Create Account
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </motion.button>
           </motion.form>
 
@@ -283,9 +408,3 @@ export default function Register() {
     </div>
   );
 }
-
-
-
-
-
-
