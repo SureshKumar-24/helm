@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@prisma/client": "^6.16.3",
     "framer-motion": "^12.23.22",
     "lucide-react": "^0.544.0",

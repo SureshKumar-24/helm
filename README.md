@@ -36,6 +36,7 @@ Visit http://localhost:3000
 - **[PROGRESS.md](./PROGRESS.md)** - Current implementation progress and completed tasks
 - **[DATABASE_SETUP.md](./DATABASE_SETUP.md)** - Detailed database setup guide
 - **[INSTALLATION.md](./INSTALLATION.md)** - Step-by-step installation instructions
+- **[PWA_SETUP.md](./docs/PWA_SETUP.md)** - Progressive Web App setup and usage guide
 - **[.kiro/specs/smart-weekly-budget-coach/](./.kiro/specs/smart-weekly-budget-coach/)** - Feature specifications
 
 ## ✨ Features
@@ -53,6 +54,24 @@ Visit http://localhost:3000
 - ✅ **Real-Time Spending Updates** - Automatic budget updates on transactions
 - ✅ **Threshold Alerts** - Smart notifications at 80%, 90%, 100% spending
 - ✅ **Empathetic Messaging** - Non-judgmental, supportive budget messages
+- ✅ **Progressive Web App (PWA)** - Install on mobile and desktop devices
+
+### 📱 PWA Features
+
+Financial Helm is now a Progressive Web App! Install it on your device for a native app-like experience:
+
+- **📲 Install on Any Device** - Add to home screen on Android, iOS, and desktop
+- **🔌 Offline Support** - View your financial data even without internet
+- **🔄 Auto Updates** - Get the latest features automatically
+- **⚡ Fast Performance** - Cached assets for instant loading
+- **🎨 Native Experience** - Runs in standalone mode without browser UI
+
+**Installation Instructions:**
+- **Android**: Tap the install prompt or menu → "Install app"
+- **iOS**: Safari → Share → "Add to Home Screen"
+- **Desktop**: Click the install icon in the address bar
+
+For detailed PWA documentation, see [docs/PWA_SETUP.md](./docs/PWA_SETUP.md)
 
 ### In Development
 
