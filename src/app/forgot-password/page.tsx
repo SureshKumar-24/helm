@@ -45,7 +45,7 @@ export default function ForgotPassword() {
     setIsSubmitting(true);
 
     try {
-      const response = await requestPasswordReset(email);
+      await requestPasswordReset(email);
       
       // Show success message
       setSuccess(true);
@@ -54,15 +54,16 @@ export default function ForgotPassword() {
       setTimeout(() => {
         router.push(`/verify-otp?email=${encodeURIComponent(email)}`);
       }, 2000);
-    } catch (err: any) {
-      console.error('Password reset request error:', err);
+    } catch (err) {
+      const error = err as Error;
+      console.error('Password reset request error:', error);
       
       // Check if it's a rate limit error
-      if (err.message.includes('Too many')) {
-        setError(err.message);
+      if (error.message.includes('Too many')) {
+        setError(error.message);
         setRateLimitCountdown(60); // 60 second countdown
       } else {
-        setError(err.message || 'Failed to send reset code. Please try again.');
+        setError(error.message || 'Failed to send reset code. Please try again.');
       }
       setIsSubmitting(false);
     }

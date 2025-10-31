@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Check, X, KeyRound } from 'lucide-react';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/lib/auth/validation';
 import { resetPassword } from '@/lib/auth/passwordResetService';
 
-export default function ResetPassword() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const resetToken = searchParams.get('token') || '';
@@ -81,18 +81,19 @@ export default function ResetPassword() {
       
       // Show success message
       setSuccess(true);
-    } catch (err: any) {
-      console.error('Password reset error:', err);
+    } catch (err) {
+      const error = err as Error;
+      console.error('Password reset error:', error);
       
       // Handle expired token
-      if (err.message.includes('expired') || err.message.includes('Invalid reset token')) {
-        setError(err.message);
+      if (error.message.includes('expired') || error.message.includes('Invalid reset token')) {
+        setError(error.message);
         // Redirect to forgot password after 3 seconds
         setTimeout(() => {
           router.push('/forgot-password?error=expired');
         }, 3000);
       } else {
-        setError(err.message || 'Failed to reset password. Please try again.');
+        setError(error.message || 'Failed to reset password. Please try again.');
       }
       setIsSubmitting(false);
     }
@@ -328,5 +329,20 @@ export default function ResetPassword() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#22C55E] via-[#0A3D62] to-[#8B5CF6] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, ArrowLeft, Shield, AlertCircle, Clock, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Shield, AlertCircle, Clock, RefreshCw } from 'lucide-react';
 import { verifyOTP } from '@/lib/auth/passwordResetService';
 
-export default function VerifyOTP() {
+function VerifyOTPContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const email = searchParams.get('email') || '';
@@ -95,20 +95,21 @@ export default function VerifyOTP() {
       
       // Store reset token and redirect to reset password page
       router.push(`/reset-password?token=${encodeURIComponent(response.reset_token)}`);
-    } catch (err: any) {
-      console.error('OTP verification error:', err);
+    } catch (err) {
+      const error = err as Error;
+      console.error('OTP verification error:', error);
       
       // Decrement attempts
       setAttemptsRemaining((prev) => prev - 1);
       
       // Handle specific errors
-      if (err.message.includes('Maximum')) {
+      if (error.message.includes('Maximum')) {
         setError('Maximum verification attempts exceeded. Please request a new code.');
-      } else if (err.message.includes('expired')) {
+      } else if (error.message.includes('expired')) {
         setError('This code has expired. Please request a new one.');
         setIsExpired(true);
       } else {
-        setError(err.message || 'Invalid code. Please try again.');
+        setError(error.message || 'Invalid code. Please try again.');
       }
       
       // Clear OTP input for retry
@@ -250,5 +251,20 @@ export default function VerifyOTP() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyOTP() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#0A3D62] via-[#0f5280] to-[#0A3D62] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading...</p>
+        </div>
+      </div>
+    }>
+      <VerifyOTPContent />
+    </Suspense>
   );
 }
