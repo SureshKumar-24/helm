@@ -51,7 +51,7 @@ export async function login(email: string, password: string, rememberMe: boolean
     password,
   });
   
-  const { access_token, refresh_token, token_type } = response.data;
+  const { access_token, refresh_token } = response.data;
   
   // Store tokens with remember me preference and email
   setTokens(access_token, refresh_token, rememberMe, email);

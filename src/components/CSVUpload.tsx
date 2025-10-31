@@ -38,96 +38,8 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback(
-    async (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-
-      const files = Array.from(e.dataTransfer.files);
-      const csvFile = files.find((f) => f.name.endsWith('.csv'));
-
-      if (csvFile) {
-        await processFile(csvFile);
-      } else {
-        onError('Please drop a CSV file');
-      }
-    },
-    [onError]
-  );
-
-  const handleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        await processFile(file);
-      }
-    },
-    []
-  );
-
-  const handleSampleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const filePath = e.target.value;
-      setSelectedSampleFile(filePath);
-
-      if (!filePath) return;
-
-      try {
-        const response = await fetch(`/${filePath}`);
-        if (!response.ok) {
-          throw new Error('Failed to load sample file');
-        }
-
-        const text = await response.text();
-        const blob = new Blob([text], { type: 'text/csv' });
-        const file = new File([blob], filePath.split('/').pop() || 'sample.csv', { type: 'text/csv' });
-
-        await processFile(file);
-      } catch (error) {
-        console.error('Error loading sample file:', error);
-        onError('Failed to load sample file');
-      }
-    },
-    [onError]
-  );
-
-  const processFile = async (file: File) => {
-    setIsProcessing(true);
-    setUploadProgress(0);
-
-    try {
-      setUploadProgress(20);
-      const validation = await csvParserService.validateCSV(file);
-
-      if (!validation.isValid) {
-        onError(validation.errors.join(', '));
-        setIsProcessing(false);
-        return;
-      }
-
-      setUploadProgress(50);
-      const transactions = await csvParserService.parseCSV(file);
-
-      setUploadProgress(80);
-
-      // Simple category assignment based on keywords
-      const categorizedTransactions = transactions.map((t) => ({
-        ...t,
-        category: suggestCategoryLocal(t.description),
-      }));
-
-      setUploadProgress(100);
-      setParsedTransactions(categorizedTransactions);
-      setShowReview(true);
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to parse CSV file');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   // Simple local category suggestion based on keywords
-  const suggestCategoryLocal = (description: string): string => {
+  const suggestCategoryLocal = useCallback((description: string): string => {
     const desc = description.toLowerCase();
 
     if (desc.includes('movie') || desc.includes('cinema') || desc.includes('theater') ||
@@ -175,7 +87,95 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
     }
 
     return 'Miscellaneous';
-  };
+  }, []);
+
+  const processFile = useCallback(async (file: File) => {
+    setIsProcessing(true);
+    setUploadProgress(0);
+
+    try {
+      setUploadProgress(20);
+      const validation = await csvParserService.validateCSV(file);
+
+      if (!validation.isValid) {
+        onError(validation.errors.join(', '));
+        setIsProcessing(false);
+        return;
+      }
+
+      setUploadProgress(50);
+      const transactions = await csvParserService.parseCSV(file);
+
+      setUploadProgress(80);
+
+      // Simple category assignment based on keywords
+      const categorizedTransactions = transactions.map((t) => ({
+        ...t,
+        category: suggestCategoryLocal(t.description),
+      }));
+
+      setUploadProgress(100);
+      setParsedTransactions(categorizedTransactions);
+      setShowReview(true);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to parse CSV file');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [onError, suggestCategoryLocal]);
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+
+      const files = Array.from(e.dataTransfer.files);
+      const csvFile = files.find((f) => f.name.endsWith('.csv'));
+
+      if (csvFile) {
+        await processFile(csvFile);
+      } else {
+        onError('Please drop a CSV file');
+      }
+    },
+    [onError, processFile]
+  );
+
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        await processFile(file);
+      }
+    },
+    [processFile]
+  );
+
+  const handleSampleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const filePath = e.target.value;
+      setSelectedSampleFile(filePath);
+
+      if (!filePath) return;
+
+      try {
+        const response = await fetch(`/${filePath}`);
+        if (!response.ok) {
+          throw new Error('Failed to load sample file');
+        }
+
+        const text = await response.text();
+        const blob = new Blob([text], { type: 'text/csv' });
+        const file = new File([blob], filePath.split('/').pop() || 'sample.csv', { type: 'text/csv' });
+
+        await processFile(file);
+      } catch (error) {
+        console.error('Error loading sample file:', error);
+        onError('Failed to load sample file');
+      }
+    },
+    [onError, processFile]
+  );
 
   const handleCategoryChange = (index: number, newCategory: string) => {
     const updated = [...parsedTransactions];

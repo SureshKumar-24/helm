@@ -93,9 +93,10 @@ export default function Login() {
       sessionStorage.removeItem('returnUrl');
 
       router.push(returnUrl);
-    } catch (err: any) {
+    } catch (err) {
       // Display error to user - don't navigate
-      const errorMessage = err.response?.data?.detail || err.message || 'Login failed. Please check your credentials and try again.';
+      const error = err as { response?: { data?: { detail?: string } }; message?: string };
+      const errorMessage = error.response?.data?.detail || error.message || 'Login failed. Please check your credentials and try again.';
       setLoginError(errorMessage);
       console.error('Login error:', err);
       // Explicitly prevent any navigation

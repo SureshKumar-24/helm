@@ -94,8 +94,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Fetch user profile
       const userData = await authService.getCurrentUser();
       setUser(userData);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Login failed. Please try again.';
+    } catch (err) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      const errorMessage = error.response?.data?.detail || 'Login failed. Please try again.';
       setError(errorMessage);
       throw err;
     } finally {
@@ -113,8 +114,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Auto-login after registration
       await login(email, password);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Registration failed. Please try again.';
+    } catch (err) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      const errorMessage = error.response?.data?.detail || 'Registration failed. Please try again.';
       setError(errorMessage);
       throw err;
     } finally {

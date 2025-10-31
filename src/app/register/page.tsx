@@ -96,23 +96,32 @@ export default function Register() {
 
       // Only navigate if registration was successful (no error thrown)
       router.push('/dashboard');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Registration error:', err);
 
       // Handle validation errors from API - don't navigate
-      if (err.response?.data?.detail) {
-        if (Array.isArray(err.response.data.detail)) {
+      const error = err as { 
+        response?: { 
+          data?: { 
+            detail?: string | Array<{ loc: string[]; msg: string }> 
+          } 
+        }; 
+        message?: string 
+      };
+      
+      if (error.response?.data?.detail) {
+        if (Array.isArray(error.response.data.detail)) {
           const apiErrors: Record<string, string> = {};
-          err.response.data.detail.forEach((error: any) => {
-            const field = error.loc[error.loc.length - 1];
-            apiErrors[field] = error.msg;
+          error.response.data.detail.forEach((validationError) => {
+            const field = validationError.loc[validationError.loc.length - 1];
+            apiErrors[field] = validationError.msg;
           });
           setValidationErrors(apiErrors);
         } else {
-          setRegisterError(err.response.data.detail);
+          setRegisterError(error.response.data.detail);
         }
       } else {
-        setRegisterError(err.message || 'Registration failed. Please try again.');
+        setRegisterError(error.message || 'Registration failed. Please try again.');
       }
       // Explicitly prevent any navigation
       setIsSubmitting(false);

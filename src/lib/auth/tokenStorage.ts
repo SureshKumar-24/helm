@@ -21,7 +21,7 @@ function isLocalStorageAvailable(): boolean {
     localStorage.setItem(test, test);
     localStorage.removeItem(test);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -35,7 +35,7 @@ function isSessionStorageAvailable(): boolean {
     sessionStorage.setItem(test, test);
     sessionStorage.removeItem(test);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
