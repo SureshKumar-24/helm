@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, CheckCircle2, Sparkles, ArrowRight, AlertCircle, Check, X } from 'lucide-react';
@@ -25,11 +25,35 @@ export default function Register() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [registerError, setRegisterError] = useState<string | null>(null);
 
-  const { register } = useAuth();
+  const { register, isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
   const passwordStrength = checkPasswordStrength(password);
   const passwordValidation = validatePassword(password);
+
+  useEffect(() => {
+    // Redirect to dashboard if already authenticated
+    if (!loading && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, loading, router]);
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#22C55E] via-[#0A3D62] to-[#8B5CF6] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render register form if authenticated
+  if (isAuthenticated) {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
