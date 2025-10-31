@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, LogIn, Sparkles, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateEmail } from '@/lib/auth/validation';
+import { getRememberMePreference, getRememberedEmail } from '@/lib/auth/tokenStorage';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -18,6 +19,20 @@ export default function Login() {
 
   const { login, isAuthenticated, loading } = useAuth();
   const router = useRouter();
+
+  // Load remembered email and checkbox state on mount
+  useEffect(() => {
+    const rememberedEmail = getRememberedEmail();
+    const rememberMePref = getRememberMePreference();
+    
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
+    }
+    
+    if (rememberMePref) {
+      setRememberMe(true);
+    }
+  }, []);
 
   useEffect(() => {
     // Redirect to dashboard if already authenticated

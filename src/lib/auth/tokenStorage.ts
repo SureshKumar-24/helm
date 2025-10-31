@@ -7,6 +7,7 @@
 
 const REFRESH_TOKEN_KEY = 'helm_refresh_token';
 const REMEMBER_ME_KEY = 'helm_remember_me';
+const REMEMBERED_EMAIL_KEY = 'helm_remembered_email';
 
 // Store access token in memory (cleared on page refresh)
 let accessToken: string | null = null;
@@ -42,15 +43,19 @@ function isSessionStorageAvailable(): boolean {
 /**
  * Store both access and refresh tokens
  */
-export function setTokens(newAccessToken: string, newRefreshToken: string, rememberMe: boolean = false): void {
+export function setTokens(newAccessToken: string, newRefreshToken: string, rememberMe: boolean = false, email?: string): void {
   // Store access token in memory
   accessToken = newAccessToken;
-  
+
   // Store refresh token based on remember me preference
   if (rememberMe && isLocalStorageAvailable()) {
     try {
       localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
       localStorage.setItem(REMEMBER_ME_KEY, 'true');
+      // Store email if provided
+      if (email) {
+        localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+      }
       // Clear from sessionStorage if it exists
       if (isSessionStorageAvailable()) {
         sessionStorage.removeItem(REFRESH_TOKEN_KEY);
@@ -64,11 +69,61 @@ export function setTokens(newAccessToken: string, newRefreshToken: string, remem
       // Clear from localStorage if it exists
       if (isLocalStorageAvailable()) {
         localStorage.removeItem(REFRESH_TOKEN_KEY);
-        localStorage.removeItem(REMEMBER_ME_KEY);
+        // Don't clear remember me preference and email when not using remember me
+        // This allows the checkbox and email to persist
       }
     } catch (error) {
       console.error('Failed to store refresh token in sessionStorage:', error);
     }
+  }
+}
+
+/**
+ * Set remember me preference and email
+ */
+export function setRememberMePreference(rememberMe: boolean, email?: string): void {
+  if (!isLocalStorageAvailable()) return;
+
+  try {
+    if (rememberMe) {
+      localStorage.setItem(REMEMBER_ME_KEY, 'true');
+      if (email) {
+        localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+      }
+    } else {
+      localStorage.removeItem(REMEMBER_ME_KEY);
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+  } catch (error) {
+    console.error('Failed to set remember me preference:', error);
+  }
+}
+
+/**
+ * Get remember me preference
+ */
+export function getRememberMePreference(): boolean {
+  if (!isLocalStorageAvailable()) return false;
+
+  try {
+    return localStorage.getItem(REMEMBER_ME_KEY) === 'true';
+  } catch (error) {
+    console.error('Failed to get remember me preference:', error);
+    return false;
+  }
+}
+
+/**
+ * Get remembered email
+ */
+export function getRememberedEmail(): string | null {
+  if (!isLocalStorageAvailable()) return null;
+
+  try {
+    return localStorage.getItem(REMEMBERED_EMAIL_KEY);
+  } catch (error) {
+    console.error('Failed to get remembered email:', error);
+    return null;
   }
 }
 
@@ -92,7 +147,7 @@ export function getRefreshToken(): string | null {
       console.error('Failed to retrieve refresh token from localStorage:', error);
     }
   }
-  
+
   // Try sessionStorage (session only)
   if (isSessionStorageAvailable()) {
     try {
@@ -101,27 +156,28 @@ export function getRefreshToken(): string | null {
       console.error('Failed to retrieve refresh token from sessionStorage:', error);
     }
   }
-  
+
   return null;
 }
 
 /**
- * Clear all tokens from storage
+ * Clear all tokens from storage (but keep remember me preference and email)
  */
 export function clearTokens(): void {
   // Clear access token from memory
   accessToken = null;
-  
-  // Clear refresh token from localStorage
+
+  // Clear refresh token from localStorage (but keep remember me preference and email)
   if (isLocalStorageAvailable()) {
     try {
       localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.removeItem(REMEMBER_ME_KEY);
+      // Don't remove REMEMBER_ME_KEY and REMEMBERED_EMAIL_KEY
+      // This allows the preference to persist across logout
     } catch (error) {
       console.error('Failed to clear tokens from localStorage:', error);
     }
   }
-  
+
   // Clear refresh token from sessionStorage
   if (isSessionStorageAvailable()) {
     try {
@@ -145,4 +201,7 @@ export const TokenStorage = {
   getRefreshToken,
   clearTokens,
   hasTokens,
+  setRememberMePreference,
+  getRememberMePreference,
+  getRememberedEmail,
 };
