@@ -15,7 +15,7 @@ export interface AuthContextValue {
   error: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -104,13 +104,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const register = async (email: string, password: string): Promise<void> => {
+  const register = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ): Promise<void> => {
     setError(null);
     setLoading(true);
     
     try {
       // Register user
-      await authService.register(email, password);
+      await authService.register(email, password, firstName, lastName);
       
       // Auto-login after registration
       await login(email, password);

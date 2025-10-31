@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, LogIn, Sparkles, AlertCircle } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Mail, Lock, Eye, EyeOff, LogIn, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateEmail } from '@/lib/auth/validation';
 import { getRememberMePreference, getRememberedEmail } from '@/lib/auth/tokenStorage';
@@ -16,9 +16,11 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showResetSuccess, setShowResetSuccess] = useState(false);
 
   const { login, isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Load remembered email and checkbox state on mount
   useEffect(() => {
@@ -32,7 +34,17 @@ export default function Login() {
     if (rememberMePref) {
       setRememberMe(true);
     }
-  }, []);
+
+    // Check for password reset success
+    const resetSuccess = searchParams.get('reset');
+    if (resetSuccess === 'success') {
+      setShowResetSuccess(true);
+      // Hide message after 5 seconds
+      setTimeout(() => {
+        setShowResetSuccess(false);
+      }, 5000);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     // Redirect to dashboard if already authenticated
@@ -126,6 +138,17 @@ export default function Login() {
               Continue your financial journey
             </p>
           </div>
+
+          {/* Password reset success message */}
+          {showResetSuccess && (
+            <div className="mb-5 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-green-800">Password reset successful!</p>
+                <p className="text-sm text-green-700 mt-1">You can now log in with your new password.</p>
+              </div>
+            </div>
+          )}
 
           {/* Error message */}
           {loginError && (

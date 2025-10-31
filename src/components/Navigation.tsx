@@ -4,13 +4,12 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Home, 
-  LayoutDashboard, 
-  Receipt, 
-  Wallet, 
-  Target, 
-  Menu, 
+import {
+  LayoutDashboard,
+  Receipt,
+  Wallet,
+  Target,
+  Menu,
   X,
   LogIn,
   UserPlus,
@@ -24,13 +23,14 @@ export default function Navigation() {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
-  const navLinks = [
-    { href: '/', label: 'Home', icon: Home },
+  const authenticatedNavLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/transactions', label: 'Transactions', icon: Receipt },
     { href: '/budgets', label: 'Budgets', icon: Wallet },
     { href: '/goals', label: 'Goals', icon: Target },
   ];
+
+  const navLinks = isAuthenticated ? authenticatedNavLinks : [];
 
   return (
     <nav className="bg-white/95 backdrop-blur-md shadow-md sticky top-0 z-50 border-b border-gray-100">
@@ -74,7 +74,9 @@ export default function Navigation() {
               <>
                 <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
                   <User className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">{user?.email}</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {user?.first_name} {user?.last_name}
+                  </span>
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -160,13 +162,15 @@ export default function Navigation() {
                   </motion.div>
                 );
               })}
-              
+
               <div className="pt-4 space-y-2 border-t border-gray-100 mt-4">
                 {isAuthenticated ? (
                   <>
                     <div className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-lg">
                       <User className="w-5 h-5 text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700">{user?.email}</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        {user?.first_name} {user?.last_name}
+                      </span>
                     </div>
                     <button
                       onClick={() => {

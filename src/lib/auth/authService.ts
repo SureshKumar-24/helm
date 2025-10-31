@@ -9,6 +9,8 @@ import { setTokens, clearTokens, getRefreshToken } from './tokenStorage';
 export interface User {
   id: string;
   email: string;
+  first_name: string;
+  last_name: string;
   role: string;
   is_active: boolean;
   created_at: string;
@@ -23,6 +25,8 @@ export interface TokenResponse {
 export interface RegisterRequest {
   email: string;
   password: string;
+  first_name: string;
+  last_name: string;
 }
 
 export interface LoginRequest {
@@ -33,10 +37,17 @@ export interface LoginRequest {
 /**
  * Register a new user
  */
-export async function register(email: string, password: string): Promise<User> {
+export async function register(
+  email: string,
+  password: string,
+  firstName: string,
+  lastName: string
+): Promise<User> {
   const response = await apiClient.post<User>('/api/v1/auth/register', {
     email,
     password,
+    first_name: firstName,
+    last_name: lastName,
   });
   
   return response.data;

@@ -15,6 +15,8 @@ import {
 } from '@/lib/auth/validation';
 
 export default function Register() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -66,6 +68,14 @@ export default function Register() {
     // Frontend validation
     const errors: Record<string, string> = {};
 
+    if (!firstName.trim()) {
+      errors.firstName = 'First name is required';
+    }
+
+    if (!lastName.trim()) {
+      errors.lastName = 'Last name is required';
+    }
+
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
       errors.email = emailValidation.errors[0];
@@ -92,7 +102,7 @@ export default function Register() {
     setIsSubmitting(true);
 
     try {
-      await register(email, password);
+      await register(email, password, firstName, lastName);
 
       // Only navigate if registration was successful (no error thrown)
       router.push('/dashboard');
@@ -160,6 +170,59 @@ export default function Register() {
             onSubmit={handleSubmit}
             className="space-y-4"
           >
+            {/* Name fields - side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* First Name field */}
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    setValidationErrors(prev => ({ ...prev, firstName: '' }));
+                    setRegisterError(null);
+                  }}
+                  disabled={isSubmitting}
+                  className={`block w-full px-3 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${validationErrors.firstName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  placeholder="John"
+                  required
+                />
+                {validationErrors.firstName && (
+                  <p className="mt-1 text-sm text-red-600">{validationErrors.firstName}</p>
+                )}
+              </div>
+
+              {/* Last Name field */}
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    setValidationErrors(prev => ({ ...prev, lastName: '' }));
+                    setRegisterError(null);
+                  }}
+                  disabled={isSubmitting}
+                  className={`block w-full px-3 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${validationErrors.lastName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  placeholder="Doe"
+                  required
+                />
+                {validationErrors.lastName && (
+                  <p className="mt-1 text-sm text-red-600">{validationErrors.lastName}</p>
+                )}
+              </div>
+            </div>
+
             {/* Email field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
