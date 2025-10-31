@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { validateEnvironment } from "@/lib/env";
@@ -54,10 +55,13 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
       </head>
-      <body className={`${inter.className} antialiased bg-gray-50`}>
+      <body className={`${inter.className} antialiased bg-gray-50 flex flex-col min-h-screen`}>
         <AuthProvider>
           <Navigation />
-          {children}
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Footer />
           <PWAUpdatePrompt />
         </AuthProvider>
       </body>
