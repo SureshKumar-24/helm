@@ -14,7 +14,7 @@ export interface AuthContextValue {
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -83,13 +83,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string, rememberMe: boolean = false): Promise<void> => {
     setError(null);
     setLoading(true);
     
     try {
-      // Login and get tokens
-      await authService.login(email, password);
+      // Login and get tokens with remember me preference
+      await authService.login(email, password, rememberMe);
       
       // Fetch user profile
       const userData = await authService.getCurrentUser();

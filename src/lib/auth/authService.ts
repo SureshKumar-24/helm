@@ -45,7 +45,7 @@ export async function register(email: string, password: string): Promise<User> {
 /**
  * Login with email and password
  */
-export async function login(email: string, password: string): Promise<TokenResponse> {
+export async function login(email: string, password: string, rememberMe: boolean = false): Promise<TokenResponse> {
   const response = await apiClient.post<TokenResponse>('/api/v1/auth/login', {
     email,
     password,
@@ -53,8 +53,8 @@ export async function login(email: string, password: string): Promise<TokenRespo
   
   const { access_token, refresh_token, token_type } = response.data;
   
-  // Store tokens
-  setTokens(access_token, refresh_token);
+  // Store tokens with remember me preference
+  setTokens(access_token, refresh_token, rememberMe);
   
   return response.data;
 }

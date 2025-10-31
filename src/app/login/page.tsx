@@ -47,7 +47,7 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
 
       // Only navigate if login was successful (no error thrown)
       const returnUrl = sessionStorage.getItem('returnUrl') || '/dashboard';
