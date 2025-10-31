@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     // Find or create categories
     const categoryMap = new Map<string, string>();
-    
+
     for (const transaction of transactions) {
       if (transaction.category && !categoryMap.has(transaction.category)) {
         // Try to find existing category
@@ -151,8 +151,8 @@ export async function POST(request: NextRequest) {
         category?: string;
         notes?: string;
       }) => {
-        const categoryId = transaction.category 
-          ? categoryMap.get(transaction.category) 
+        const categoryId = transaction.category
+          ? categoryMap.get(transaction.category)
           : null;
 
         return prisma.transaction.create({
