@@ -84,10 +84,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const login = async (email: string, password: string): Promise<void> => {
+    setError(null);
+    setLoading(true);
+    
     try {
-      setError(null);
-      setLoading(true);
-      
       // Login and get tokens
       await authService.login(email, password);
       
@@ -104,10 +104,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const register = async (email: string, password: string): Promise<void> => {
+    setError(null);
+    setLoading(true);
+    
     try {
-      setError(null);
-      setLoading(true);
-      
       // Register user
       await authService.register(email, password);
       

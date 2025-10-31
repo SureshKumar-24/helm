@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, CheckCircle2, Sparkles, ArrowRight, AlertCircle, Check, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -24,8 +23,9 @@ export default function Register() {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  
-  const { register, error: authError } = useAuth();
+  const [registerError, setRegisterError] = useState<string | null>(null);
+
+  const { register } = useAuth();
   const router = useRouter();
 
   const passwordStrength = checkPasswordStrength(password);
@@ -33,53 +33,66 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+
+    // Clear previous errors
     setValidationErrors({});
-    
+    setRegisterError(null);
+
     // Frontend validation
     const errors: Record<string, string> = {};
-    
+
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
       errors.email = emailValidation.errors[0];
     }
-    
+
     if (!passwordValidation.isValid) {
       errors.password = passwordValidation.errors[0];
     }
-    
+
     const matchValidation = validatePasswordMatch(password, confirmPassword);
     if (!matchValidation.isValid) {
       errors.confirmPassword = matchValidation.errors[0];
     }
-    
+
     if (!agreeTerms) {
       errors.terms = 'You must agree to the terms and conditions';
     }
-    
+
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       await register(email, password);
-      
-      // Redirect to dashboard after successful registration
+
+      // Only navigate if registration was successful (no error thrown)
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Registration error:', err);
-      
-      // Handle validation errors from API
-      if (err.response?.data?.detail && Array.isArray(err.response.data.detail)) {
-        const apiErrors: Record<string, string> = {};
-        err.response.data.detail.forEach((error: any) => {
-          const field = error.loc[error.loc.length - 1];
-          apiErrors[field] = error.msg;
-        });
-        setValidationErrors(apiErrors);
+
+      // Handle validation errors from API - don't navigate
+      if (err.response?.data?.detail) {
+        if (Array.isArray(err.response.data.detail)) {
+          const apiErrors: Record<string, string> = {};
+          err.response.data.detail.forEach((error: any) => {
+            const field = error.loc[error.loc.length - 1];
+            apiErrors[field] = error.msg;
+          });
+          setValidationErrors(apiErrors);
+        } else {
+          setRegisterError(err.response.data.detail);
+        }
+      } else {
+        setRegisterError(err.message || 'Registration failed. Please try again.');
       }
+      // Explicitly prevent any navigation
+      setIsSubmitting(false);
+      return;
     } finally {
       setIsSubmitting(false);
     }
@@ -87,64 +100,30 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#22C55E] via-[#0A3D62] to-[#8B5CF6] flex items-center justify-center p-4">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.div
-          className="absolute top-40 right-40 w-96 h-96 bg-white/10 rounded-full blur-3xl"
-          animate={{
-            scale: [1, 1.3, 1],
-            x: [0, 50, 0],
-            y: [0, 30, 0],
-          }}
-          transition={{
-            duration: 12,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative w-full max-w-md"
-      >
+      <div className="relative w-full max-w-md">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 relative overflow-hidden">
           {/* Gradient border */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#22C55E] via-[#3B82F6] to-[#8B5CF6]" />
 
           {/* Header */}
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-center mb-6"
-          >
+          <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-2xl mb-4 shadow-lg">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-[#0A3D62] mb-2">Create Account</h1>
             <p className="text-gray-600">Start your journey to financial freedom</p>
-          </motion.div>
+          </div>
 
           {/* Error message */}
-          {authError && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4"
-            >
+          {registerError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800">{authError}</p>
-            </motion.div>
+              <p className="text-sm text-red-800">{registerError}</p>
+            </div>
           )}
 
           {/* Form */}
-          <motion.form
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
+          <form
             onSubmit={handleSubmit}
             className="space-y-4"
           >
@@ -164,11 +143,11 @@ export default function Register() {
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setValidationErrors(prev => ({ ...prev, email: '' }));
+                    setRegisterError(null);
                   }}
                   disabled={isSubmitting}
-                  className={`block w-full pl-10 pr-3 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${
-                    validationErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${validationErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="you@example.com"
                   required
                 />
@@ -194,11 +173,11 @@ export default function Register() {
                   onChange={(e) => {
                     setPassword(e.target.value);
                     setValidationErrors(prev => ({ ...prev, password: '' }));
+                    setRegisterError(null);
                   }}
                   disabled={isSubmitting}
-                  className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${
-                    validationErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${validationErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="••••••••"
                   required
                 />
@@ -215,21 +194,17 @@ export default function Register() {
                   )}
                 </button>
               </div>
-              
+
               {/* Password strength indicator */}
               {password && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-2"
-                >
+                <div className="mt-2">
                   <div className="flex gap-1 mb-2">
                     {[1, 2, 3, 4].map((level) => (
                       <div
                         key={level}
                         className="h-1.5 flex-1 rounded-full transition-all duration-300"
                         style={{
-                          backgroundColor: passwordStrength.score >= level 
+                          backgroundColor: passwordStrength.score >= level
                             ? getPasswordStrengthColor(passwordStrength.score)
                             : '#e5e7eb'
                         }}
@@ -239,7 +214,7 @@ export default function Register() {
                   <p className="text-xs font-medium mb-2" style={{ color: getPasswordStrengthColor(passwordStrength.score) }}>
                     {getPasswordStrengthLabel(passwordStrength.score)}
                   </p>
-                  
+
                   {/* Password requirements checklist */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-xs">
@@ -283,9 +258,9 @@ export default function Register() {
                       </span>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )}
-              
+
               {validationErrors.password && (
                 <p className="mt-1 text-sm text-red-600">{validationErrors.password}</p>
               )}
@@ -307,11 +282,11 @@ export default function Register() {
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
                     setValidationErrors(prev => ({ ...prev, confirmPassword: '' }));
+                    setRegisterError(null);
                   }}
                   disabled={isSubmitting}
-                  className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${
-                    validationErrors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`block w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition-all outline-none ${validationErrors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="••••••••"
                   required
                 />
@@ -364,14 +339,11 @@ export default function Register() {
             </div>
 
             {/* Submit button */}
-            <motion.button
-              whileHover={!isSubmitting ? { scale: 1.02 } : {}}
-              whileTap={!isSubmitting ? { scale: 0.98 } : {}}
+            <button
               type="submit"
               disabled={isSubmitting}
-              className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 ${
-                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'
+                }`}
             >
               {isSubmitting ? (
                 <>
@@ -385,16 +357,11 @@ export default function Register() {
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
-            </motion.button>
-          </motion.form>
+            </button>
+          </form>
 
           {/* Login link */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-6 text-center text-sm text-gray-600"
-          >
+          <p className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{' '}
             <Link
               href="/login"
@@ -402,9 +369,9 @@ export default function Register() {
             >
               Sign in
             </Link>
-          </motion.p>
+          </p>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

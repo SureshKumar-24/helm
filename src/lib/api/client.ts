@@ -20,11 +20,11 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = getAccessToken();
-    
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error: AxiosError) => {
@@ -44,13 +44,11 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = getRefreshToken();
-        
+
         if (!refreshToken) {
-          // No refresh token available, redirect to login
+          // No refresh token available, just reject the error
+          // Don't redirect here - let the component handle it
           clearTokens();
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-          }
           return Promise.reject(error);
         }
 
@@ -66,7 +64,7 @@ apiClient.interceptors.response.use(
         );
 
         const { access_token, refresh_token: newRefreshToken } = response.data;
-        
+
         // Update stored tokens
         setTokens(access_token, newRefreshToken);
 
@@ -74,14 +72,12 @@ apiClient.interceptors.response.use(
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${access_token}`;
         }
-        
+
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
+        // Refresh failed, clear tokens but don't redirect
+        // Let the component handle the error display
         clearTokens();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
         return Promise.reject(refreshError);
       }
     }
