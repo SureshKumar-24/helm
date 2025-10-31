@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
       try {
         // Get a transaction from this category to get the date
         const sampleTransaction = createdTransactions.find(
-          t => t.categoryId === categoryId
+          (t) => t.categoryId === categoryId
         );
         if (sampleTransaction) {
           await budgetCalculationService.updateWeeklySpending(
