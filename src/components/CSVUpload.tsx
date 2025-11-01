@@ -406,14 +406,40 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
         </div>
 
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">CSV Format Tips</h4>
-          <ul className="text-xs text-blue-800 space-y-1">
-            <li>• Your CSV should have columns for: Date, Description, and Amount</li>
-            <li>• Dates can be in MM/DD/YYYY or YYYY-MM-DD format</li>
-            <li>• Negative amounts are treated as expenses</li>
-            <li>• Positive amounts are treated as income</li>
-            <li>• You can review and edit categories before importing</li>
-          </ul>
+          <h4 className="text-sm font-semibold text-blue-900 mb-2">📋 CSV Format Tips</h4>
+          
+          <div className="space-y-3 text-xs text-blue-800">
+            <div>
+              <p className="font-semibold mb-1">Spese Istantanee (Instant Expenses):</p>
+              <code className="bg-white px-2 py-1 rounded text-xs block">
+                servizio;importo;data_pagamento<br/>
+                Esempio: Netflix;15.99;2024-01-15
+              </code>
+            </div>
+
+            <div>
+              <p className="font-semibold mb-1">Spese Ricorrenti (Recurring Expenses):</p>
+              <code className="bg-white px-2 py-1 rounded text-xs block">
+                servizio;importo;frequenza;data_inizio<br/>
+                Esempio: Spotify;9.99;mensile;2024-01-01
+              </code>
+            </div>
+
+            <div className="border-t border-blue-200 pt-2 mt-2">
+              <p className="font-semibold mb-1">Note:</p>
+              <ul className="space-y-1 ml-2">
+                <li>• La prima riga deve contenere l&apos;intestazione</li>
+                <li>• Usa il punto e virgola (;) come separatore tra i campi</li>
+                <li>• Le date supportano i formati: YYYY-MM-DD o DD/MM/YYYY</li>
+                <li>• Gli importi possono essere positivi o negativi (max ±10.000 €)</li>
+                <li>• Le frequenze valide sono: giornaliera, settimanale, mensile, annuale</li>
+                <li>• I servizi vengono creati automaticamente se non esistono</li>
+                <li>• La categoria viene assegnata automaticamente</li>
+                <li>• Il file può contenere multiple righe (una spesa per riga)</li>
+                <li>• I caratteri speciali vengono gestiti automaticamente</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
