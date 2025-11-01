@@ -84,16 +84,19 @@ function DashboardContent() {
     }).format(amount);
   };
 
-  const handleUploadComplete = (uploadedTransactions: { date: string; description: string; amount: number; type: string; category?: string }[]) => {
-    console.log('Uploaded transactions:', uploadedTransactions);
+  const handleUploadComplete = (result: any) => {
+    console.log('Upload result:', result);
+    
+    // Extract transactions from the backend response
+    const uploadedTransactions = result.transactions || [];
     
     // Convert to Transaction format with IDs
-    const transactionsWithIds: Transaction[] = uploadedTransactions.map((t, index) => ({
-      id: `${Date.now()}-${index}`,
+    const transactionsWithIds: Transaction[] = uploadedTransactions.map((t: any) => ({
+      id: t.id || `${Date.now()}-${Math.random()}`,
       date: t.date,
-      description: t.description,
-      amount: t.amount,
-      category: (t.category || 'Uncategorized') as Transaction['category'],
+      description: t.service || t.description,
+      amount: Math.abs(parseFloat(t.amount)),
+      category: (t.category?.name || 'Uncategorized') as Transaction['category'],
       type: t.type as 'income' | 'expense',
     }));
     
@@ -105,7 +108,7 @@ function DashboardContent() {
     calculateSummary(transactionsWithIds);
     
     setShowCSVUpload(false);
-    alert(`Successfully imported ${uploadedTransactions.length} transactions! 🎉`);
+    alert(`Successfully imported ${result.imported_count} transactions! 🎉`);
   };
 
   const handleUploadError = (error: string) => {
