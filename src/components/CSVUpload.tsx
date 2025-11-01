@@ -410,33 +410,33 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
           
           <div className="space-y-3 text-xs text-blue-800">
             <div>
-              <p className="font-semibold mb-1">Spese Istantanee (Instant Expenses):</p>
+              <p className="font-semibold mb-1">Instant Expenses:</p>
               <code className="bg-white px-2 py-1 rounded text-xs block">
-                servizio;importo;data_pagamento<br/>
-                Esempio: Netflix;15.99;2024-01-15
+                service;amount;payment_date<br/>
+                Example: Netflix;15.99;2024-01-15
               </code>
             </div>
 
             <div>
-              <p className="font-semibold mb-1">Spese Ricorrenti (Recurring Expenses):</p>
+              <p className="font-semibold mb-1">Recurring Expenses:</p>
               <code className="bg-white px-2 py-1 rounded text-xs block">
-                servizio;importo;frequenza;data_inizio<br/>
-                Esempio: Spotify;9.99;mensile;2024-01-01
+                service;amount;frequency;start_date<br/>
+                Example: Spotify;9.99;monthly;2024-01-01
               </code>
             </div>
 
             <div className="border-t border-blue-200 pt-2 mt-2">
-              <p className="font-semibold mb-1">Note:</p>
+              <p className="font-semibold mb-1">Notes:</p>
               <ul className="space-y-1 ml-2">
-                <li>• La prima riga deve contenere l&apos;intestazione</li>
-                <li>• Usa il punto e virgola (;) come separatore tra i campi</li>
-                <li>• Le date supportano i formati: YYYY-MM-DD o DD/MM/YYYY</li>
-                <li>• Gli importi possono essere positivi o negativi (max ±10.000 €)</li>
-                <li>• Le frequenze valide sono: giornaliera, settimanale, mensile, annuale</li>
-                <li>• I servizi vengono creati automaticamente se non esistono</li>
-                <li>• La categoria viene assegnata automaticamente</li>
-                <li>• Il file può contenere multiple righe (una spesa per riga)</li>
-                <li>• I caratteri speciali vengono gestiti automaticamente</li>
+                <li>• First row must contain the header</li>
+                <li>• Use semicolon (;) as field separator</li>
+                <li>• Dates support formats: YYYY-MM-DD or DD/MM/YYYY</li>
+                <li>• Amounts can be positive or negative (max ±10,000)</li>
+                <li>• Valid frequencies: daily, weekly, monthly, yearly</li>
+                <li>• Services are created automatically if they don&apos;t exist</li>
+                <li>• Categories are assigned automatically</li>
+                <li>• File can contain multiple rows (one expense per row)</li>
+                <li>• Special characters are handled automatically</li>
               </ul>
             </div>
           </div>
