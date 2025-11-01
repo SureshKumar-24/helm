@@ -28,8 +28,8 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
   // Sample files available for quick testing
   const sampleFiles = [
     { value: '', label: 'Choose a sample file...' },
-    { value: 'sample-data/instant_expenses_sample.csv', label: '💰 Instant Expenses (10 items)' },
-    { value: 'sample-data/recurring_expenses_sample.csv', label: '🔄 Recurring Expenses (10 items)' },
+    { value: '/sample-data/test_instant_transactions.csv', label: '💰 Instant Expenses (Test Data)' },
+    { value: '/sample-data/test_recurring_transactions.csv', label: '🔄 Recurring Expenses (Test Data)' },
   ];
 
   // Load categories on mount
