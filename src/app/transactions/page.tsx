@@ -1,27 +1,162 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import type { ParsedTransaction } from '@/services/CSVParserService';
+import { transactionService, TransactionType, CategoryType, TransactionFilters } from '@/services/TransactionService';
+import { handleApiError, isAuthError, retryWithBackoff, isOffline } from '@/lib/api/errorHandler';
+import { transformBackendTransaction } from '@/types';
 
 function TransactionsContent() {
-  const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
+  const router = useRouter();
+  const [transactions, setTransactions] = useState<TransactionType[]>([]);
+  const [categories, setCategories] = useState<CategoryType[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Filter states
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [isRecurring, setIsRecurring] = useState<boolean | undefined>(undefined);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalTransactions, setTotalTransactions] = useState(0);
 
   useEffect(() => {
-    // Load transactions from localStorage
-    const stored = localStorage.getItem('transactions');
-    if (stored) {
-      setTransactions(JSON.parse(stored));
-    }
+    loadCategories();
   }, []);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1); // Reset to first page when filters change
+      loadTransactions(abortController.signal);
+    }, 300); // Debounce filter changes
+
+    return () => {
+      clearTimeout(timeoutId);
+      abortController.abort(); // Cancel pending request when filters change
+    };
+  }, [filter, startDate, endDate, selectedCategory, isRecurring]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    loadTransactions(abortController.signal);
+    
+    return () => {
+      abortController.abort(); // Cancel pending request when page changes
+    };
+  }, [currentPage, pageSize]);
+
+  const loadCategories = async () => {
+    try {
+      const cats = await transactionService.getCategories();
+      setCategories(cats);
+    } catch (err) {
+      console.error('Failed to load categories:', err);
+    }
+  };
+
+  const loadTransactions = async (signal?: AbortSignal) => {
+    setIsLoading(true);
+    setError(null);
+    
+    // Check if offline
+    if (isOffline()) {
+      setError('You are offline. Please check your internet connection.');
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      const filters: TransactionFilters = {
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
+      };
+      
+      if (filter !== 'all') {
+        filters.type = filter;
+      }
+      if (startDate) {
+        filters.start_date = startDate;
+      }
+      if (endDate) {
+        filters.end_date = endDate;
+      }
+      if (selectedCategory) {
+        filters.category_id = selectedCategory;
+      }
+      if (isRecurring !== undefined) {
+        filters.is_recurring = isRecurring;
+      }
+      
+      // Use retry logic for transient failures
+      const data = await retryWithBackoff(() => transactionService.getTransactions(filters));
+      
+      // Check if request was cancelled
+      if (signal?.aborted) {
+        return;
+      }
+      
+      setTransactions(data);
+      setTotalTransactions(data.length); // Note: API doesn't return total count, so we use returned length
+    } catch (err) {
+      // Ignore abort errors
+      if (signal?.aborted) {
+        return;
+      }
+      
+      const apiError = handleApiError(err);
+      
+      if (isAuthError(err)) {
+        setError('Authentication required. Redirecting to login...');
+        setTimeout(() => router.push('/login'), 2000);
+      } else {
+        setError(apiError.detail || apiError.message);
+      }
+    } finally {
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const clearFilters = () => {
+    setStartDate('');
+    setEndDate('');
+    setSelectedCategory('');
+    setIsRecurring(undefined);
+    setFilter('all');
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = startDate || endDate || selectedCategory || isRecurring !== undefined;
+  
+  const totalPages = Math.ceil(totalTransactions / pageSize);
+  const canGoPrevious = currentPage > 1;
+  const canGoNext = transactions.length === pageSize; // If we got a full page, there might be more
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(Math.abs(amount));
+  };
+
+  const getCategoryDisplay = (transaction: TransactionType) => {
+    if (!transaction.category) return 'Uncategorized';
+    return `${transaction.category.icon || '📦'} ${transaction.category.name}`;
+  };
+
+  const getCategoryColor = (transaction: TransactionType) => {
+    return transaction.category?.color || '#6B7280';
   };
 
   const filteredTransactions = transactions.filter((t) => {
@@ -31,11 +166,57 @@ function TransactionsContent() {
 
   const totalIncome = transactions
     .filter((t) => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   const totalExpenses = transactions
     .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-[#0A3D62] mb-2">Transactions</h1>
+            <p className="text-gray-600">View and manage all your transactions</p>
+          </div>
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0A3D62] mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading transactions...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-[#0A3D62] mb-2">Transactions</h1>
+            <p className="text-gray-600">View and manage all your transactions</p>
+          </div>
+          <Card>
+            <CardContent>
+              <div className="text-center py-12">
+                <span className="text-6xl mb-4 block">⚠️</span>
+                <p className="text-red-600 text-lg mb-4">{error}</p>
+                <button
+                  onClick={() => loadTransactions()}
+                  className="px-4 py-2 bg-[#0A3D62] text-white rounded-lg hover:bg-[#0A3D62]/90 transition"
+                >
+                  Try Again
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -97,38 +278,125 @@ function TransactionsContent() {
         </div>
 
         {/* Filters */}
-        <div className="mb-6 flex gap-3">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === 'all'
-                ? 'bg-[#0A3D62] text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            All ({transactions.length})
-          </button>
-          <button
-            onClick={() => setFilter('income')}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === 'income'
-                ? 'bg-[#22C55E] text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Income ({transactions.filter((t) => t.type === 'income').length})
-          </button>
-          <button
-            onClick={() => setFilter('expense')}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === 'expense'
-                ? 'bg-[#EF4444] text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Expenses ({transactions.filter((t) => t.type === 'expense').length})
-          </button>
-        </div>
+        <Card className="mb-6">
+          <CardContent>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setFilter('all')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    filter === 'all'
+                      ? 'bg-[#0A3D62] text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setFilter('income')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    filter === 'income'
+                      ? 'bg-[#22C55E] text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                  }`}
+                >
+                  Income
+                </button>
+                <button
+                  onClick={() => setFilter('expense')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    filter === 'expense'
+                      ? 'bg-[#EF4444] text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                  }`}
+                >
+                  Expenses
+                </button>
+              </div>
+              
+              <div className="flex gap-2">
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
+                  {showFilters ? '▲ Hide Filters' : '▼ Show Filters'}
+                </button>
+              </div>
+            </div>
+
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.icon} {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Recurring
+                  </label>
+                  <select
+                    value={isRecurring === undefined ? '' : isRecurring ? 'true' : 'false'}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setIsRecurring(value === '' ? undefined : value === 'true');
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
+                  >
+                    <option value="">All Transactions</option>
+                    <option value="true">Recurring Only</option>
+                    <option value="false">One-time Only</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Transactions List */}
         <Card>
@@ -153,7 +421,7 @@ function TransactionsContent() {
                         Date
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Description
+                        Service
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Category
@@ -167,16 +435,34 @@ function TransactionsContent() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredTransactions.map((transaction, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
+                    {filteredTransactions.map((transaction) => (
+                      <tr key={transaction.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {new Date(transaction.date).toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {transaction.description}
+                          <div>
+                            <div className="font-medium">{transaction.service}</div>
+                            {transaction.description && (
+                              <div className="text-xs text-gray-500">{transaction.description}</div>
+                            )}
+                            {transaction.is_recurring && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                🔄 {transaction.frequency}
+                              </div>
+                            )}
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {transaction.category || 'Uncategorized'}
+                        <td className="px-4 py-3 text-sm">
+                          <span
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                            style={{
+                              backgroundColor: `${getCategoryColor(transaction)}20`,
+                              color: getCategoryColor(transaction),
+                            }}
+                          >
+                            {getCategoryDisplay(transaction)}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <span
@@ -203,6 +489,60 @@ function TransactionsContent() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {filteredTransactions.length > 0 && (
+              <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-600">
+                    Showing {filteredTransactions.length} transactions
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">Per page:</label>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
+                    >
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={!canGoPrevious}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      canGoPrevious
+                        ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    ← Previous
+                  </button>
+                  <div className="px-4 py-2 text-sm text-gray-600">
+                    Page {currentPage}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={!canGoNext}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      canGoNext
+                        ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Next →
+                  </button>
+                </div>
               </div>
             )}
           </CardContent>
