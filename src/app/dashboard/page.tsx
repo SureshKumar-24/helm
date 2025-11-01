@@ -13,6 +13,8 @@ function DashboardContent() {
   const [showCSVUpload, setShowCSVUpload] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalIncome: 0,
     totalExpenses: 0,
@@ -25,11 +27,11 @@ function DashboardContent() {
   useEffect(() => {
     const fetchTransactions = async () => {
       if (!user?.id) return;
-      
+
       try {
         setLoading(true);
         const response = await transactionService.getTransactions();
-        
+
         // Convert backend format to frontend format
         const formattedTransactions: Transaction[] = response.map((t: any) => ({
           id: t.id,
@@ -39,7 +41,7 @@ function DashboardContent() {
           category: (t.category?.name || 'Miscellaneous') as Transaction['category'],
           type: t.type as 'income' | 'expense',
         }));
-        
+
         setTransactions(formattedTransactions);
         calculateSummary(formattedTransactions);
       } catch (error) {
@@ -116,7 +118,7 @@ function DashboardContent() {
     if (user?.id) {
       try {
         const response = await transactionService.getTransactions();
-        
+
         // Convert backend format to frontend format
         const formattedTransactions: Transaction[] = response.map((t: any) => ({
           id: t.id,
@@ -126,21 +128,27 @@ function DashboardContent() {
           category: (t.category?.name || 'Miscellaneous') as Transaction['category'],
           type: t.type as 'income' | 'expense',
         }));
-        
+
         setTransactions(formattedTransactions);
         calculateSummary(formattedTransactions);
+        
+        // Show success message
+        setSuccessMessage(`Successfully imported ${result.imported_count} transactions!`);
+        setTimeout(() => setSuccessMessage(null), 5000);
       } catch (error) {
         console.error('Failed to refresh transactions:', error);
+        setErrorMessage('Failed to refresh transactions after import. Please refresh the page.');
+        setTimeout(() => setErrorMessage(null), 5000);
       }
     }
 
     setShowCSVUpload(false);
-    alert(`Successfully imported ${result.imported_count} transactions! 🎉`);
   };
 
   const handleUploadError = (error: string) => {
     console.error('Upload error:', error);
-    alert(`Error: ${error}`);
+    setErrorMessage(error);
+    setTimeout(() => setErrorMessage(null), 8000);
   };
 
   if (loading) {
@@ -157,6 +165,56 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-6 bg-green-50 border-l-4 border-green-500 rounded-lg p-4 shadow-md animate-fade-in">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-green-800">Success!</h3>
+                <p className="text-sm text-green-700 mt-1">{successMessage}</p>
+              </div>
+              <button
+                onClick={() => setSuccessMessage(null)}
+                className="flex-shrink-0 text-green-500 hover:text-green-700 transition"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mb-6 bg-red-50 border-l-4 border-red-500 rounded-lg p-4 shadow-md animate-fade-in">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-800">Error</h3>
+                <p className="text-sm text-red-700 mt-1">{errorMessage}</p>
+              </div>
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="flex-shrink-0 text-red-500 hover:text-red-700 transition"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Page Header */}
         <div className="mb-8 flex justify-between items-center">
           <div>
@@ -316,8 +374,8 @@ function DashboardContent() {
                       <div className="flex items-center space-x-3">
                         <div
                           className={`w-10 h-10 rounded-full flex items-center justify-center ${transaction.type === 'income'
-                              ? 'bg-[#22C55E]/10 text-[#22C55E]'
-                              : 'bg-[#EF4444]/10 text-[#EF4444]'
+                            ? 'bg-[#22C55E]/10 text-[#22C55E]'
+                            : 'bg-[#EF4444]/10 text-[#EF4444]'
                             }`}
                         >
                           {transaction.type === 'income' ? '↑' : '↓'}
