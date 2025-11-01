@@ -49,6 +49,56 @@ export interface FinancialSummary {
   transactionCount: number;
 }
 
+// Backend API Types
+export interface BackendTransaction {
+  id: string;
+  user_id: string;
+  service: string;
+  description: string | null;
+  amount: number;
+  type: 'income' | 'expense';
+  date: string;
+  source: string;
+  is_recurring: boolean;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
+  start_date: string | null;
+  category: BackendCategory | null;
+  created_at: string;
+}
+
+export interface BackendCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+}
+
+// Transformation Functions
+export function transformBackendTransaction(bt: BackendTransaction): Transaction {
+  return {
+    id: bt.id,
+    date: bt.date,
+    description: bt.service,
+    amount: Math.abs(bt.amount),
+    category: (bt.category?.name as Category) || 'Uncategorized',
+    type: bt.type,
+    notes: bt.description || undefined,
+  };
+}
+
+export function transformBackendCategory(bc: BackendCategory): {
+  name: string;
+  icon: string;
+  color: string;
+} {
+  return {
+    name: bc.name,
+    icon: bc.icon || '📦',
+    color: bc.color || '#6B7280',
+  };
+}
+
 
 
 

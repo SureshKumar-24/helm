@@ -1,32 +1,65 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { csvParserService, ParsedTransaction } from '@/services/CSVParserService';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { transactionService, ImportResult, CategoryType, TransactionType } from '@/services/TransactionService';
+import { handleApiError, isAuthError, isRateLimitError, retryWithBackoff, isOffline } from '@/lib/api/errorHandler';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 
 interface CSVUploadProps {
-  onUploadComplete: (transactions: ParsedTransaction[]) => void;
+  onUploadComplete: (result: ImportResult) => void;
   onError: (error: string) => void;
 }
 
 export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps) {
+  const router = useRouter();
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
+  const [transactionType, setTransactionType] = useState<'instant' | 'recurring'>('instant');
+  const [categories, setCategories] = useState<CategoryType[]>([]);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [showReview, setShowReview] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [selectedSampleFile, setSelectedSampleFile] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sample files available for quick testing
   const sampleFiles = [
     { value: '', label: 'Choose a sample file...' },
-    { value: 'sample-transactions.csv', label: '📄 Quick Test (15 transactions)' },
-    { value: 'sample-data/subscriptions-sample.csv', label: '📱 Subscriptions (10 items)' },
-    { value: 'sample-data/one-time-expenses-sample.csv', label: '💰 One-Time Expenses (10 items)' },
+    { value: 'sample-data/instant_expenses_sample.csv', label: '💰 Instant Expenses (10 items)' },
+    { value: 'sample-data/recurring_expenses_sample.csv', label: '🔄 Recurring Expenses (10 items)' },
   ];
+
+  // Load categories on mount
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    try {
+      const cats = await transactionService.getCategories();
+      setCategories(cats);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+      // Use fallback local categories
+      setCategories([
+        { id: '1', name: 'Entertainment', description: null, icon: '🎬', color: '#F59E0B' },
+        { id: '2', name: 'Music', description: null, icon: '🎵', color: '#8B5CF6' },
+        { id: '3', name: 'Video Streaming', description: null, icon: '📺', color: '#EF4444' },
+        { id: '4', name: 'Software/Cloud', description: null, icon: '💻', color: '#3B82F6' },
+        { id: '5', name: 'Communications', description: null, icon: '📱', color: '#22C55E' },
+        { id: '6', name: 'Utilities', description: null, icon: '⚡', color: '#0A3D62' },
+        { id: '7', name: 'Travel/Transport', description: null, icon: '✈️', color: '#06B6D4' },
+        { id: '8', name: 'Groceries', description: null, icon: '🛒', color: '#10B981' },
+        { id: '9', name: 'Health/Wellness', description: null, icon: '💪', color: '#EC4899' },
+        { id: '10', name: 'Miscellaneous', description: null, icon: '📦', color: '#6B7280' },
+      ]);
+    }
+  };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -38,91 +71,22 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
     setIsDragging(false);
   }, []);
 
-  // Simple local category suggestion based on keywords
-  const suggestCategoryLocal = useCallback((description: string): string => {
-    const desc = description.toLowerCase();
-
-    if (desc.includes('movie') || desc.includes('cinema') || desc.includes('theater') ||
-      desc.includes('concert') || desc.includes('game')) {
-      return 'Entertainment';
-    }
-
-    if (desc.includes('spotify') || desc.includes('apple music') || desc.includes('music')) {
-      return 'Music';
-    }
-
-    if (desc.includes('netflix') || desc.includes('disney') || desc.includes('hulu') ||
-      desc.includes('hbo') || desc.includes('prime video')) {
-      return 'Video Streaming';
-    }
-
-    if (desc.includes('adobe') || desc.includes('microsoft') || desc.includes('dropbox') ||
-      desc.includes('github') || desc.includes('cloud')) {
-      return 'Software/Cloud';
-    }
-
-    if (desc.includes('phone') || desc.includes('mobile') || desc.includes('verizon') ||
-      desc.includes('at&t') || desc.includes('t-mobile') || desc.includes('internet')) {
-      return 'Communications';
-    }
-
-    if (desc.includes('electric') || desc.includes('water') || desc.includes('gas') ||
-      desc.includes('utility')) {
-      return 'Utilities';
-    }
-
-    if (desc.includes('uber') || desc.includes('lyft') || desc.includes('gas station') ||
-      desc.includes('flight') || desc.includes('hotel') || desc.includes('airbnb')) {
-      return 'Travel/Transport';
-    }
-
-    if (desc.includes('grocery') || desc.includes('supermarket') || desc.includes('whole foods') ||
-      desc.includes('trader joe') || desc.includes('safeway')) {
-      return 'Groceries';
-    }
-
-    if (desc.includes('gym') || desc.includes('fitness') || desc.includes('pharmacy') ||
-      desc.includes('doctor') || desc.includes('hospital')) {
-      return 'Health/Wellness';
-    }
-
-    return 'Miscellaneous';
-  }, []);
-
   const processFile = useCallback(async (file: File) => {
-    setIsProcessing(true);
-    setUploadProgress(0);
-
-    try {
-      setUploadProgress(20);
-      const validation = await csvParserService.validateCSV(file);
-
-      if (!validation.isValid) {
-        onError(validation.errors.join(', '));
-        setIsProcessing(false);
-        return;
-      }
-
-      setUploadProgress(50);
-      const transactions = await csvParserService.parseCSV(file);
-
-      setUploadProgress(80);
-
-      // Simple category assignment based on keywords
-      const categorizedTransactions = transactions.map((t) => ({
-        ...t,
-        category: suggestCategoryLocal(t.description),
-      }));
-
-      setUploadProgress(100);
-      setParsedTransactions(categorizedTransactions);
-      setShowReview(true);
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to parse CSV file');
-    } finally {
-      setIsProcessing(false);
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      onError('File size exceeds 10MB limit');
+      return;
     }
-  }, [onError, suggestCategoryLocal]);
+
+    // Validate file type
+    if (!file.name.endsWith('.csv')) {
+      onError('Please select a CSV file');
+      return;
+    }
+
+    setSelectedFile(file);
+    setShowReview(true);
+  }, [onError]);
 
   const handleDrop = useCallback(
     async (e: React.DragEvent) => {
@@ -158,6 +122,13 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
 
       if (!filePath) return;
 
+      // Determine transaction type from file path
+      if (filePath.includes('recurring')) {
+        setTransactionType('recurring');
+      } else {
+        setTransactionType('instant');
+      }
+
       try {
         const response = await fetch(`/${filePath}`);
         if (!response.ok) {
@@ -177,32 +148,63 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
     [onError, processFile]
   );
 
-  const handleCategoryChange = (index: number, newCategory: string) => {
-    const updated = [...parsedTransactions];
-    updated[index] = { ...updated[index], category: newCategory };
-    setParsedTransactions(updated);
-  };
-
   const handleConfirm = async () => {
-    try {
-      // Just pass transactions to parent component (no backend call)
-      onUploadComplete(parsedTransactions);
+    if (!selectedFile) {
+      onError('No file selected');
+      return;
+    }
 
-      // Reset state
-      setParsedTransactions([]);
-      setShowReview(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+    // Check if offline
+    if (isOffline()) {
+      onError('You are offline. Please check your internet connection.');
+      return;
+    }
+
+    setIsProcessing(true);
+    setUploadProgress(0);
+
+    try {
+      setUploadProgress(30);
+
+      // Use retry logic for transient failures (but not for rate limits)
+      const result = await retryWithBackoff(
+        () => transactionService.importTransactions(selectedFile, transactionType),
+        2 // Only 2 retries for uploads to avoid hitting rate limits
+      );
+
+      setUploadProgress(100);
+      setImportResult(result);
+
+      // Show success message
+      if (result.failed_count === 0) {
+        onUploadComplete(result);
       }
-    } catch (err) {
-      console.error('Failed to process transactions:', err);
-      onError('Failed to process transactions');
+
+      // Keep showing review with results
+      setShowReview(true);
+    } catch (error) {
+      const apiError = handleApiError(error);
+
+      if (isAuthError(error)) {
+        onError('Authentication required. Redirecting to login...');
+        setTimeout(() => router.push('/login'), 2000);
+      } else if (isRateLimitError(error)) {
+        onError('Upload limit reached. Please try again in an hour.');
+      } else {
+        onError(apiError.detail || apiError.message);
+      }
+
+      setShowReview(false);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleCancel = () => {
-    setParsedTransactions([]);
+    setSelectedFile(null);
+    setImportResult(null);
     setShowReview(false);
+    setShowErrors(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -212,101 +214,207 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount);
+    }).format(Math.abs(amount));
   };
 
-  if (showReview) {
+  const getCategoryDisplay = (transaction: TransactionType) => {
+    if (!transaction.category) return 'Uncategorized';
+    return `${transaction.category.icon || '📦'} ${transaction.category.name}`;
+  };
+
+  if (showReview && importResult) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Review Transactions ({parsedTransactions.length})</CardTitle>
+          <CardTitle>
+            Import Results
+          </CardTitle>
+          <div className="mt-2 space-y-2">
+            {importResult.failed_count === 0 ? (
+              <div className="flex items-center gap-2 text-green-600">
+                <span className="text-2xl">✅</span>
+                <p className="text-sm font-medium">
+                  Successfully imported {importResult.imported_count} transactions
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-yellow-600">
+                  <span className="text-2xl">⚠️</span>
+                  <p className="text-sm font-medium">
+                    Partial import: {importResult.imported_count} succeeded, {importResult.failed_count} failed
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowErrors(!showErrors)}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  {showErrors ? 'Hide' : 'Show'} error details
+                </button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {showErrors && importResult.errors.length > 0 && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-red-900 mb-2">Import Errors</h4>
+              <div className="space-y-2">
+                {importResult.errors.map((error, index) => (
+                  <div key={index} className="text-xs text-red-800">
+                    <span className="font-medium">Row {error.row}</span> - {error.field}: {error.message}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {importResult.transactions.length > 0 && (
+            <div className="max-h-96 overflow-y-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {importResult.transactions.map((transaction, index) => (
+                    <tr key={transaction.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {new Date(transaction.date).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {transaction.service}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium">
+                        <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
+                          {transaction.type === 'income' ? '+' : '-'}
+                          {formatCurrency(transaction.amount)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs ${transaction.type === 'income'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                          }`}>
+                          {transaction.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {getCategoryDisplay(transaction)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="mt-6 flex justify-end">
+            <Button variant="primary" onClick={handleCancel}>
+              Done
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (showReview && selectedFile && !importResult) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Confirm Upload</CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Review the imported transactions and adjust categories if needed.
+            Review your selection before uploading to the server.
           </p>
         </CardHeader>
         <CardContent>
-          <div className="max-h-96 overflow-y-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {parsedTransactions.map((transaction, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {new Date(transaction.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {transaction.description}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium">
-                      <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
-                        {transaction.type === 'income' ? '+' : '-'}
-                        {formatCurrency(transaction.amount)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs ${transaction.type === 'income'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                        }`}>
-                        {transaction.type}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {editingIndex === index ? (
-                        <select
-                          value={transaction.category}
-                          onChange={(e) => {
-                            handleCategoryChange(index, e.target.value);
-                            setEditingIndex(null);
-                          }}
-                          onBlur={() => setEditingIndex(null)}
-                          autoFocus
-                          className="border border-gray-300 rounded px-2 py-1 text-sm"
-                        >
-                          <option value="Entertainment">Entertainment</option>
-                          <option value="Music">Music</option>
-                          <option value="Video Streaming">Video Streaming</option>
-                          <option value="Software/Cloud">Software/Cloud</option>
-                          <option value="Communications">Communications</option>
-                          <option value="Utilities">Utilities</option>
-                          <option value="Travel/Transport">Travel/Transport</option>
-                          <option value="Groceries">Groceries</option>
-                          <option value="Health/Wellness">Health/Wellness</option>
-                          <option value="Miscellaneous">Miscellaneous</option>
-                        </select>
-                      ) : (
-                        <button
-                          onClick={() => setEditingIndex(index)}
-                          className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          {transaction.category || 'Set category'}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Selected File</p>
+                  <p className="text-sm text-gray-600">{selectedFile.name}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {(selectedFile.size / 1024).toFixed(2)} KB
+                  </p>
+                </div>
+                <span className="text-4xl">📄</span>
+              </div>
 
-          <div className="mt-6 flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">{parsedTransactions.length}</span> transactions ready to import
+              <div className="border-t border-gray-200 pt-4">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Transaction Type
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="instant"
+                      checked={transactionType === 'instant'}
+                      onChange={(e) => setTransactionType(e.target.value as 'instant' | 'recurring')}
+                      className="mr-2"
+                      disabled={isProcessing}
+                    />
+                    <span className="text-sm">Instant Expenses</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="recurring"
+                      checked={transactionType === 'recurring'}
+                      onChange={(e) => setTransactionType(e.target.value as 'instant' | 'recurring')}
+                      className="mr-2"
+                      disabled={isProcessing}
+                    />
+                    <span className="text-sm">Recurring Expenses</span>
+                  </label>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleCancel}>
+
+            {isProcessing && (
+              <div className="space-y-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600 text-center">Uploading... {uploadProgress}%</p>
+              </div>
+            )}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                Expected Format: {transactionType === 'instant' ? 'Instant' : 'Recurring'} Expenses
+              </h4>
+              <code className="bg-white px-2 py-1 rounded text-xs block">
+                {transactionType === 'instant' ? (
+                  <>
+                    service;amount;payment_date<br />
+                    Example: Netflix;-15.99;2024-01-15
+                  </>
+                ) : (
+                  <>
+                    service;amount;frequency;start_date<br />
+                    Example: Spotify;9.99;monthly;2024-01-01
+                  </>
+                )}
+              </code>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={handleCancel} disabled={isProcessing}>
                 Cancel
               </Button>
-              <Button variant="primary" onClick={handleConfirm}>
-                Confirm & Import
+              <Button variant="primary" onClick={handleConfirm} disabled={isProcessing}>
+                {isProcessing ? 'Uploading...' : 'Upload to Server'}
               </Button>
             </div>
           </div>
@@ -320,7 +428,7 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
       <CardHeader>
         <CardTitle>Upload Transactions</CardTitle>
         <p className="text-sm text-gray-600 mt-2">
-          Import your bank transactions from a CSV file to get started.
+          Import your transactions from a CSV file to the server.
         </p>
       </CardHeader>
       <CardContent>
@@ -333,49 +441,30 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
             : 'border-gray-300 hover:border-gray-400'
             }`}
         >
-          {isProcessing ? (
-            <div className="space-y-4">
-              <div className="text-4xl">⏳</div>
-              <div>
-                <p className="text-lg font-medium text-gray-900">Processing CSV file...</p>
-                <p className="text-sm text-gray-600 mt-1">This may take a moment</p>
-              </div>
-              <div className="w-full max-w-xs mx-auto bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-              <p className="text-sm text-gray-500">{uploadProgress}%</p>
-            </div>
-          ) : (
-            <>
-              <div className="text-6xl mb-4">📄</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Drop your CSV file here
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                or click to browse your files
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleFileSelect}
-                className="hidden"
-                id="csv-upload"
-              />
-              <label htmlFor="csv-upload" className="cursor-pointer">
-                <span className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
-                  Choose File
-                </span>
-              </label>
-              <div className="mt-6 text-xs text-gray-500">
-                <p>Supported format: CSV with Date, Description, Amount columns</p>
-                <p className="mt-1">Maximum file size: 10MB</p>
-              </div>
-            </>
-          )}
+          <div className="text-6xl mb-4">📄</div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Drop your CSV file here
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            or click to browse your files
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileSelect}
+            className="hidden"
+            id="csv-upload"
+          />
+          <label htmlFor="csv-upload" className="cursor-pointer">
+            <span className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
+              Choose File
+            </span>
+          </label>
+          <div className="mt-6 text-xs text-gray-500">
+            <p>Supported format: CSV with semicolon (;) separator</p>
+            <p className="mt-1">Maximum file size: 10MB</p>
+          </div>
         </div>
 
         <div className="mt-6 flex items-center">
@@ -413,7 +502,7 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
               <p className="font-semibold mb-1">Instant Expenses:</p>
               <code className="bg-white px-2 py-1 rounded text-xs block">
                 service;amount;payment_date<br />
-                Example: Netflix;15.99;2024-01-15
+                Example: Netflix;-15.99;2024-01-15
               </code>
             </div>
 
@@ -433,10 +522,7 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
                 <li>• Dates support formats: YYYY-MM-DD or DD/MM/YYYY</li>
                 <li>• Amounts can be positive or negative (max ±10,000)</li>
                 <li>• Valid frequencies: daily, weekly, monthly, yearly</li>
-                <li>• Services are created automatically if they don&apos;t exist</li>
-                <li>• Categories are assigned automatically</li>
-                <li>• File can contain multiple rows (one expense per row)</li>
-                <li>• Special characters are handled automatically</li>
+                <li>• Categories are assigned automatically by the server</li>
               </ul>
             </div>
           </div>

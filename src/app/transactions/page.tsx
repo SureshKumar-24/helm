@@ -7,6 +7,9 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { transactionService, TransactionType, CategoryType, TransactionFilters } from '@/services/TransactionService';
 import { handleApiError, isAuthError, retryWithBackoff, isOffline } from '@/lib/api/errorHandler';
 import { transformBackendTransaction } from '@/types';
+import TransactionModal from '@/components/TransactionModal';
+import DeleteConfirmModal from '@/components/DeleteConfirmModal';
+import Toast from '@/components/Toast';
 
 function TransactionsContent() {
   const router = useRouter();
@@ -15,6 +18,15 @@ function TransactionsContent() {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionType | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<TransactionType | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
   // Filter states
   const [startDate, setStartDate] = useState<string>('');
@@ -137,6 +149,42 @@ function TransactionsContent() {
     setCurrentPage(1);
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!transactionToDelete) return;
+    
+    setIsDeleting(true);
+    
+    // Optimistic update: remove from UI immediately
+    const previousTransactions = [...transactions];
+    setTransactions(transactions.filter(t => t.id !== transactionToDelete.id));
+    setIsDeleteModalOpen(false);
+    
+    try {
+      await transactionService.deleteTransaction(transactionToDelete.id);
+      setToast({ message: 'Transaction deleted successfully', type: 'success' });
+      setTransactionToDelete(null);
+      // Refresh to ensure consistency
+      loadTransactions();
+    } catch (err) {
+      // Revert optimistic update on error
+      setTransactions(previousTransactions);
+      const apiError = handleApiError(err);
+      setToast({ message: 'Failed to delete: ' + apiError.message, type: 'error' });
+      setIsDeleteModalOpen(true); // Reopen modal
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleModalSuccess = () => {
+    const message = modalMode === 'create' 
+      ? 'Transaction created successfully' 
+      : 'Transaction updated successfully';
+    setToast({ message, type: 'success' });
+    // Refresh list to get updated data
+    loadTransactions();
+  };
+
   const hasActiveFilters = startDate || endDate || selectedCategory || isRecurring !== undefined;
   
   const totalPages = Math.ceil(totalTransactions / pageSize);
@@ -221,9 +269,22 @@ function TransactionsContent() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#0A3D62] mb-2">Transactions</h1>
-          <p className="text-gray-600">View and manage all your transactions</p>
+        <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-[#0A3D62] mb-2">Transactions</h1>
+            <p className="text-gray-600">View and manage all your transactions</p>
+          </div>
+          <button
+            onClick={() => {
+              setModalMode('create');
+              setSelectedTransaction(null);
+              setIsModalOpen(true);
+            }}
+            className="w-full sm:w-auto px-6 py-3 bg-[#0A3D62] text-white rounded-lg hover:bg-[#0A3D62]/90 transition flex items-center justify-center gap-2 font-medium shadow-md"
+          >
+            <span className="text-xl">➕</span>
+            Add Transaction
+          </button>
         </div>
 
         {/* Summary Cards */}
@@ -432,11 +493,14 @@ function TransactionsContent() {
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                         Amount
                       </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {filteredTransactions.map((transaction) => (
-                      <tr key={transaction.id} className="hover:bg-gray-50">
+                      <tr key={transaction.id} className="hover:bg-gray-50 group">
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {new Date(transaction.date).toLocaleDateString()}
                         </td>
@@ -484,6 +548,33 @@ function TransactionsContent() {
                             {transaction.type === 'income' ? '+' : '-'}
                             {formatCurrency(transaction.amount)}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => {
+                                setModalMode('edit');
+                                setSelectedTransaction(transaction);
+                                setIsModalOpen(true);
+                              }}
+                              className="p-2 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
+                              title="Edit transaction"
+                              aria-label="Edit transaction"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => {
+                                setTransactionToDelete(transaction);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="p-2 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
+                              title="Delete transaction"
+                              aria-label="Delete transaction"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -547,6 +638,32 @@ function TransactionsContent() {
             )}
           </CardContent>
         </Card>
+
+        {/* Modals */}
+        <TransactionModal
+          isOpen={isModalOpen}
+          mode={modalMode}
+          transaction={selectedTransaction}
+          categories={categories}
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={handleModalSuccess}
+        />
+
+        <DeleteConfirmModal
+          isOpen={isDeleteModalOpen}
+          transaction={transactionToDelete}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDeleteConfirm}
+          isLoading={isDeleting}
+        />
+
+        {/* Toast Notification */}
+        <Toast
+          message={toast?.message || ''}
+          type={toast?.type || 'info'}
+          isVisible={!!toast}
+          onClose={() => setToast(null)}
+        />
       </div>
     </div>
   );
