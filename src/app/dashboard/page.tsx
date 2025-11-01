@@ -4,11 +4,15 @@ import { useState, useEffect } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import CSVUpload from '@/components/CSVUpload';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { transactionService } from '@/services/TransactionService';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Transaction, FinancialSummary } from '@/types';
 
 function DashboardContent() {
+  const { user } = useAuth();
   const [showCSVUpload, setShowCSVUpload] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalIncome: 0,
     totalExpenses: 0,
@@ -17,15 +21,36 @@ function DashboardContent() {
     transactionCount: 0,
   });
 
-  // Load transactions from localStorage on mount
+  // Fetch transactions from backend API
   useEffect(() => {
-    const stored = localStorage.getItem('transactions');
-    if (stored) {
-      const parsedTransactions = JSON.parse(stored);
-      setTransactions(parsedTransactions);
-      calculateSummary(parsedTransactions);
-    }
-  }, []);
+    const fetchTransactions = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setLoading(true);
+        const response = await transactionService.getTransactions();
+        
+        // Convert backend format to frontend format
+        const formattedTransactions: Transaction[] = response.map((t: any) => ({
+          id: t.id,
+          date: t.date,
+          description: t.service || t.description,
+          amount: Math.abs(parseFloat(t.amount)),
+          category: (t.category?.name || 'Miscellaneous') as Transaction['category'],
+          type: t.type as 'income' | 'expense',
+        }));
+        
+        setTransactions(formattedTransactions);
+        calculateSummary(formattedTransactions);
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [user]);
 
   const calculateSummary = (txns: Transaction[]) => {
     const income = txns.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
@@ -84,29 +109,31 @@ function DashboardContent() {
     }).format(amount);
   };
 
-  const handleUploadComplete = (result: any) => {
+  const handleUploadComplete = async (result: any) => {
     console.log('Upload result:', result);
-    
-    // Extract transactions from the backend response
-    const uploadedTransactions = result.transactions || [];
-    
-    // Convert to Transaction format with IDs
-    const transactionsWithIds: Transaction[] = uploadedTransactions.map((t: any) => ({
-      id: t.id || `${Date.now()}-${Math.random()}`,
-      date: t.date,
-      description: t.service || t.description,
-      amount: Math.abs(parseFloat(t.amount)),
-      category: (t.category?.name || 'Uncategorized') as Transaction['category'],
-      type: t.type as 'income' | 'expense',
-    }));
-    
-    // Store in localStorage
-    localStorage.setItem('transactions', JSON.stringify(transactionsWithIds));
-    
-    // Update state
-    setTransactions(transactionsWithIds);
-    calculateSummary(transactionsWithIds);
-    
+
+    // Refresh transactions from backend after successful upload
+    if (user?.id) {
+      try {
+        const response = await transactionService.getTransactions();
+        
+        // Convert backend format to frontend format
+        const formattedTransactions: Transaction[] = response.map((t: any) => ({
+          id: t.id,
+          date: t.date,
+          description: t.service || t.description,
+          amount: Math.abs(parseFloat(t.amount)),
+          category: (t.category?.name || 'Miscellaneous') as Transaction['category'],
+          type: t.type as 'income' | 'expense',
+        }));
+        
+        setTransactions(formattedTransactions);
+        calculateSummary(formattedTransactions);
+      } catch (error) {
+        console.error('Failed to refresh transactions:', error);
+      }
+    }
+
     setShowCSVUpload(false);
     alert(`Successfully imported ${result.imported_count} transactions! 🎉`);
   };
@@ -115,6 +142,17 @@ function DashboardContent() {
     console.error('Upload error:', error);
     alert(`Error: ${error}`);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#0A3D62] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your financial data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -277,11 +315,10 @@ function DashboardContent() {
                     >
                       <div className="flex items-center space-x-3">
                         <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            transaction.type === 'income'
+                          className={`w-10 h-10 rounded-full flex items-center justify-center ${transaction.type === 'income'
                               ? 'bg-[#22C55E]/10 text-[#22C55E]'
                               : 'bg-[#EF4444]/10 text-[#EF4444]'
-                          }`}
+                            }`}
                         >
                           {transaction.type === 'income' ? '↑' : '↓'}
                         </div>
@@ -293,9 +330,8 @@ function DashboardContent() {
                         </div>
                       </div>
                       <span
-                        className={`font-semibold ${
-                          transaction.type === 'income' ? 'text-[#22C55E]' : 'text-[#EF4444]'
-                        }`}
+                        className={`font-semibold ${transaction.type === 'income' ? 'text-[#22C55E]' : 'text-[#EF4444]'
+                          }`}
                       >
                         {transaction.type === 'income' ? '+' : '-'}
                         {formatCurrency(transaction.amount)}
