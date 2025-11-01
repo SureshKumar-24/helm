@@ -407,12 +407,12 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
 
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h4 className="text-sm font-semibold text-blue-900 mb-2">📋 CSV Format Tips</h4>
-          
+
           <div className="space-y-3 text-xs text-blue-800">
             <div>
               <p className="font-semibold mb-1">Instant Expenses:</p>
               <code className="bg-white px-2 py-1 rounded text-xs block">
-                service;amount;payment_date<br/>
+                service;amount;payment_date<br />
                 Example: Netflix;15.99;2024-01-15
               </code>
             </div>
@@ -420,7 +420,7 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
             <div>
               <p className="font-semibold mb-1">Recurring Expenses:</p>
               <code className="bg-white px-2 py-1 rounded text-xs block">
-                service;amount;frequency;start_date<br/>
+                service;amount;frequency;start_date<br />
                 Example: Spotify;9.99;monthly;2024-01-01
               </code>
             </div>
