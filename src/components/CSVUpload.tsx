@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { transactionService, ImportResult, CategoryType, TransactionType } from '@/services/TransactionService';
+import { transactionService, ImportResult, TransactionType } from '@/services/TransactionService';
 import { handleApiError, isAuthError, isRateLimitError, retryWithBackoff, isOffline } from '@/lib/api/errorHandler';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -18,10 +18,8 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [transactionType, setTransactionType] = useState<'instant' | 'recurring'>('instant');
-  const [categories, setCategories] = useState<CategoryType[]>([]);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [showReview, setShowReview] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [selectedSampleFile, setSelectedSampleFile] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showErrors, setShowErrors] = useState(false);
@@ -41,23 +39,10 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
 
   const loadCategories = async () => {
     try {
-      const cats = await transactionService.getCategories();
-      setCategories(cats);
+      await transactionService.getCategories();
     } catch (error) {
       console.error('Failed to load categories:', error);
-      // Use fallback local categories
-      setCategories([
-        { id: '1', name: 'Entertainment', description: null, icon: '🎬', color: '#F59E0B' },
-        { id: '2', name: 'Music', description: null, icon: '🎵', color: '#8B5CF6' },
-        { id: '3', name: 'Video Streaming', description: null, icon: '📺', color: '#EF4444' },
-        { id: '4', name: 'Software/Cloud', description: null, icon: '💻', color: '#3B82F6' },
-        { id: '5', name: 'Communications', description: null, icon: '📱', color: '#22C55E' },
-        { id: '6', name: 'Utilities', description: null, icon: '⚡', color: '#0A3D62' },
-        { id: '7', name: 'Travel/Transport', description: null, icon: '✈️', color: '#06B6D4' },
-        { id: '8', name: 'Groceries', description: null, icon: '🛒', color: '#10B981' },
-        { id: '9', name: 'Health/Wellness', description: null, icon: '💪', color: '#EC4899' },
-        { id: '10', name: 'Miscellaneous', description: null, icon: '📦', color: '#6B7280' },
-      ]);
+      // Categories are cached in the service, no need to store locally
     }
   };
 
@@ -282,7 +267,7 @@ export default function CSVUpload({ onUploadComplete, onError }: CSVUploadProps)
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {importResult.transactions.map((transaction, index) => (
+                  {importResult.transactions.map((transaction) => (
                     <tr key={transaction.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {new Date(transaction.date).toLocaleDateString()}

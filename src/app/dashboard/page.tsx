@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import CSVUpload from '@/components/CSVUpload';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { transactionService } from '@/services/TransactionService';
+import { transactionService, DashboardSummary } from '@/services/TransactionService';
 import { useAuth } from '@/contexts/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -21,22 +21,7 @@ function DashboardContent() {
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1); // 1-12 for API
 
   // Dashboard data from API
-  const [dashboardData, setDashboardData] = useState<{
-    total_income: number;
-    total_expenses: number;
-    instant_expenses: number;
-    recurring_expenses: number;
-    net_balance: number;
-    spending_by_category: Array<{
-      category_id: string;
-      category_name: string;
-      category_icon: string;
-      category_color: string;
-      total_amount: number;
-      percentage: number;
-    }>;
-    recent_transactions: any[];
-  } | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardSummary | null>(null);
 
   // Fetch dashboard data from API
   useEffect(() => {
@@ -103,7 +88,7 @@ function DashboardContent() {
     }).format(amount);
   };
 
-  const handleUploadComplete = async (result: any) => {
+  const handleUploadComplete = async (result: { imported_count: number }) => {
     console.log('Upload result:', result);
 
     // Refresh dashboard data after successful upload
@@ -371,7 +356,10 @@ function DashboardContent() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ percent }: any) => `${(percent * 100).toFixed(0)}%`}
+                        label={(props) => {
+                          const percent = Number(props.percent) || 0;
+                          return `${(percent * 100).toFixed(0)}%`;
+                        }}
                         outerRadius={110}
                         innerRadius={70}
                         fill="#8884d8"

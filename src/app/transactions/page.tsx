@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { transactionService, TransactionType, CategoryType, TransactionFilters } from '@/services/TransactionService';
 import { handleApiError, isAuthError, retryWithBackoff, isOffline } from '@/lib/api/errorHandler';
-import { transformBackendTransaction } from '@/types';
 import TransactionModal from '@/components/TransactionModal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import Toast from '@/components/Toast';
@@ -38,7 +37,6 @@ function TransactionsContent() {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const [totalTransactions, setTotalTransactions] = useState(0);
 
   useEffect(() => {
     loadCategories();
@@ -118,7 +116,6 @@ function TransactionsContent() {
       }
       
       setTransactions(data);
-      setTotalTransactions(data.length); // Note: API doesn't return total count, so we use returned length
     } catch (err) {
       // Ignore abort errors
       if (signal?.aborted) {
@@ -187,7 +184,6 @@ function TransactionsContent() {
 
   const hasActiveFilters = startDate || endDate || selectedCategory || isRecurring !== undefined;
   
-  const totalPages = Math.ceil(totalTransactions / pageSize);
   const canGoPrevious = currentPage > 1;
   const canGoNext = transactions.length === pageSize; // If we got a full page, there might be more
 

@@ -18,8 +18,6 @@ export default function DeleteConfirmModal({
   onConfirm,
   isLoading,
 }: DeleteConfirmModalProps) {
-  if (!isOpen || !transaction) return null;
-
   // Handle ESC key to close modal
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -38,6 +36,8 @@ export default function DeleteConfirmModal({
       document.body.style.overflow = 'unset';
     };
   }, [isOpen, isLoading, onClose]);
+
+  if (!isOpen || !transaction) return null;
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget && !isLoading) {

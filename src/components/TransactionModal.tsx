@@ -449,7 +449,7 @@ export default function TransactionModal({
                 id="frequency"
                 value={formData.frequency}
                 onChange={(e) => {
-                  setFormData({ ...formData, frequency: e.target.value as any });
+                  setFormData({ ...formData, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly' });
                   setIsDirty(true);
                   if (errors.frequency) setErrors({ ...errors, frequency: undefined });
                 }}
